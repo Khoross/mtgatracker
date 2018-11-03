@@ -10,7 +10,6 @@ export default function cardReducer(state: CardList = {}, action: Action) {
             newCards = newCards.reduce((acc, cur) => {
                 let tempCard = Object.assign({}, cur)
                 delete tempCard.count_in_deck
-                tempCard.cost = cur.cost.map(cost => isNaN(cost) ? cost : parseInt(cost))
                 acc[cur.mtga_id] = tempCard
                 return acc
             }, {})

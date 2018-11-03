@@ -12,8 +12,8 @@ export default function createRootReducer(history: {}) {
   return connectRouter(history)(
     combineReducers({ router: routerReducer,
       counter,
-      card,
-      deck,
+      cards: card,
+      decks: deck,
       settings })
   );
 }

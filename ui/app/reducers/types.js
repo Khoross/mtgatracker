@@ -5,7 +5,7 @@ import {ADD_CARD, ADD_CARD_BATCH, UPDATE_DECK, UPDATE_SETTINGS, HYDRATE_SETTINGS
 export type ColorCode = "R" | "W" | "B" | "U" | "G" | "C"
 export type DualColorCode = "(W/U)" | "(W/B)" | "(U/B)" | "(U/R)" | "(B/R)" | "(B/G)" | "(R/G)" | "(R/W)" | "(G/W)" | "(G/B)"
 export type Color = "Red" | "White" | "Black" | "Blue" | "Green" | "Colorless"
-export type Cost = number | "Y" | "Z" | "X" | ColorCode | DualColorCode
+export type Cost = string | "Y" | "Z" | "X" | ColorCode | DualColorCode
 
 export type Card = {
     name: string,
