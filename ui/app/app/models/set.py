@@ -39,10 +39,6 @@ class Pool(object):
             _hash += hash(hashable)
         return _hash
 
-    def __eq__(self, other):
-        for idx, element in enumerate(self.cards):
-            element.mtga_id == other.cards[idx].mtga_id
-
     @property
     def total_count(self):
         return len(self.cards)
