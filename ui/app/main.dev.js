@@ -445,7 +445,7 @@ ipcMain.on('openHistory', openHistoryWindow)
 app.disableHardwareAcceleration()
 
 const guessPackaged = () => {
-  const fullPath = path.join(__dirname, "..", "..", PY_DIST_FOLDER)
+  const fullPath = path.join(__dirname, PY_DIST_FOLDER)
   return fs.existsSync(fullPath)
 }
 
@@ -454,9 +454,9 @@ const getScriptPath = () => {
     return path.join(__dirname, "..", "..", PY_FOLDER, PY_MODULE + '.py')
   }
   if (process.platform === 'win32') {
-    return path.join(__dirname, "..", "..", PY_DIST_FOLDER, PY_MODULE, PY_MODULE + '.exe') // TODO: verify this
+    return path.join(__dirname, PY_DIST_FOLDER, PY_MODULE, PY_MODULE + '.exe') // TODO: verify this
   }
-  return path.join(__dirname, "..", "..", PY_DIST_FOLDER, PY_MODULE, PY_MODULE)
+  return path.join(__dirname, PY_DIST_FOLDER, PY_MODULE, PY_MODULE)
 }
 
 let venv_path_win
@@ -619,6 +619,7 @@ global.recentCards = recentCards
 global.recentCardsQuantityToShow = recentCardsQuantityToShow
 global.logPath = logPath
 global.historyZoom = settings.get("history-zoom", 1.0)
+global.settings = settings.getAll()
 
 /*************************************************************
  * window management

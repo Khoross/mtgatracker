@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
+import { remote } from 'electron';
 import Root from './containers/Root';
 import { configureStore, history } from './store/configureStore';
 import './app.global.css';
@@ -14,11 +15,19 @@ const ws = new ReconnectingWebSocket(`ws://127.0.0.1:${port}/`, null, {construct
 let onMessage = (data) => {
   data = JSON.parse(event.data)
   console.log(data)
-  if (data.data_type=="decklist_change") {
-    console.log(data)
-    store.dispatch(updateDecks(data.decks))
+  switch(data.data_type) {
+    case "decklist_change":
+      store.dispatch(updateDecks(data.decks))
+      return
+    case "game_state":
+      console.log(data)
+      return
+    default:
+      return
   }
 }
+
+console.log(remote.getGlobal('settings'))
 
 ws.onmessage = onMessage;
 

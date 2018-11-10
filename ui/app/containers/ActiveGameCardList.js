@@ -1,4 +1,3 @@
-import React, { Component } from 'react'
 import { connect } from 'react-redux';
 import Card from './DeckPageCard';
 import { push } from 'connected-react-router'

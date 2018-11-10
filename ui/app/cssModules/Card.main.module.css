@@ -1,0 +1,182 @@
+/* Flat theme */
+/*
+Required styled components:
+card card-COLOUR div
+>card-text div
+>>card-text-limit div - used to limit size
+>>>cardcount div - count goes here
+>>>cardname div - name goes here
+>>cost span - holder for the cost components
+>>>span - holder for individual cost
+>>>>mi mi-mana mi-shadow mi-COLOUR i - individual cost point
+>>>mi-split mi-shadow mi-split-color span - holder for dual costs
+>>>>mi mi-COLOUR i - dual cost parts
+
+Potentially:
+handle cost parts in individual components, with minimal use of styles
+*/
+
+/* style.css */.card {
+    font-family: beleren;
+    width: 297px;
+    height: 43px;
+    margin-left: 8px;
+    color: black;
+    opacity: 0.8;
+}
+
+.card-b {
+    background-image: url("card_bgs/b.png");
+}
+
+.card-bg {
+    background-image: url("card_bgs/bg.png");
+}
+
+.card-br {
+    background-image: url("card_bgs/br.png");
+}
+
+.card-c {
+    background-image: url("card_bgs/c.png");
+}
+
+.card-g {
+    background-image: url("card_bgs/g.png");
+}
+
+.card-gu {
+    background-image: url("card_bgs/gu.png");
+}
+
+.card-gw {
+    background-image: url("card_bgs/gw.png");
+}
+
+.card-r {
+    background-image: url("card_bgs/r.png");
+}
+
+.card-rg {
+    background-image: url("card_bgs/rg.png");
+}
+
+.card-rw {
+    background-image: url("card_bgs/rw.png");
+}
+
+.card-u {
+    background-image: url("card_bgs/u.png");
+}
+.card-ub {
+    background-image: url("card_bgs/ub.png");
+}
+
+.card-ur {
+    background-image: url("card_bgs/ur.png");
+}
+
+.card-w {
+    background-image: url("card_bgs/w.png");
+}
+
+.card-wb {
+    background-image: url("card_bgs/wb.png");
+}
+
+.card-wu {
+    background-image: url("card_bgs/wu.png");
+}
+
+.card-m {
+    background-image: url("card_bgs/m.png");
+}
+
+.card-text {
+    padding-top: 11px;
+    padding-left: 16px;
+}
+
+.card-text span, .card-text span span {
+    text-shadow: 0 0 0;
+}
+
+.card-text-limit {
+    width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    display: inline-block;
+    position: absolute;
+}
+
+.card-text-limit:before {
+    content: '';
+    width: 23px;
+    height: 20px;
+    position: absolute;
+    left: 218px;
+}
+
+
+.card-w .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #f1f1e1);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #f1f1e1);
+}
+
+.card-c .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #c9cdd2);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #c9cdd2);
+}
+
+.card-u .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #b2cdde);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #b2cdde);
+}
+
+.card-g .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #bbcec2);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #bbcec2);
+}
+
+.card-r .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #e8cab8);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #e8cab8);
+}
+
+.card-b .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #c1bab8);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #c1bab8);
+}
+
+.card-m .card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #d1b76c);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #d1b76c);
+}
+
+.card-text-limit:before {
+    background-image: -webkit-linear-gradient(left, rgba(182, 176, 174, 0), #c1bab8);
+    background-image: linear-gradient(left, rgba(182, 176, 174, 0), #c1bab8);
+}
+
+.card-text-limit div, .card-text-limit {
+    text-shadow: 0 0 0;
+}
+
+.cardname, .cardcount {
+  display: inline-block;
+}
+
+.link {
+    cursor: pointer;
+}
+
+.deck-container:nth-child(even) {
+    background-color: #8a8a8a;
+}
+
+.cost {
+    float: right;
+    margin-right: 17px;
+    margin-top: 2px;
+    position: relative;
+}
