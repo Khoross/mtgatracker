@@ -56,7 +56,10 @@ var showIIDs = remote.getGlobal('showIIDs');
 var showErrors = remote.getGlobal('showErrors');
 var appVersionStr = remote.getGlobal('version');
 var runFromSource = remote.getGlobal('runFromSource');
-var showWinLossCounter = remote.getGlobal('showWinLossCounter');
+var showTotalWinLossCounter = remote.getGlobal('showTotalWinLossCounter');
+var showDeckWinLossCounter = remote.getGlobal('showDeckWinLossCounter');
+var showDailyTotalWinLossCounter = remote.getGlobal('showDailyTotalWinLossCounter');
+var showDailyDeckWinLossCounter = remote.getGlobal('showDailyDeckWinLossCounter');
 var showVaultProgress = remote.getGlobal('showVaultProgress');
 var lastCollection = remote.getGlobal('lastCollection');
 var lastVaultProgress = remote.getGlobal('lastVaultProgress');
@@ -66,6 +69,7 @@ var showChessTimers = remote.getGlobal('showChessTimers');
 var hideDelay = remote.getGlobal('hideDelay');
 var invertHideMode = remote.getGlobal('invertHideMode');
 var rollupMode = remote.getGlobal('rollupMode');
+var minToTray = remote.getGlobal('minToTray');
 var recentCardsQuantityToShow = remote.getGlobal('recentCardsQuantityToShow');
 var showGameTimer = remote.getGlobal('showGameTimer');
 var zoom = remote.getGlobal('zoom');
@@ -73,7 +77,6 @@ var recentCards = remote.getGlobal('recentCards');
 var port = remote.getGlobal('port');
 var timerRunning = false;
 var uploadDelay = 0;
-
 var hideModeManager;
 
 setInterval(() => {
@@ -160,10 +163,22 @@ var appData = {
     opponent_hand: [],
     messages: [],
     version: appVersionStr,
-    showWinLossCounter: showWinLossCounter,
+    showTotalWinLossCounter: showTotalWinLossCounter,
+    showDeckWinLossCounter: showDeckWinLossCounter,
+    showDailyTotalWinLossCounter: showDailyTotalWinLossCounter,
+    showDailyDeckWinLossCounter: showDailyDeckWinLossCounter,
+    showDeckCounters: false,
+    winLossObj: winLossCounterInitial,
+    activeDeck: 'total',
+    totalWinCounter: winLossCounterInitial.alltime.total.win,
+    totalLossCounter: winLossCounterInitial.alltime.total.loss,
+    deckWinCounter: 0,
+    deckLossCounter: 0,
+    dailyTotalWinCounter: winLossCounterInitial.daily.total.win,
+    dailyTotalLossCounter: winLossCounterInitial.daily.total.win,
+    dailyDeckWinCounter: 0,
+    dailyDeckLossCounter: 0,
     showVaultProgress: showVaultProgress,
-    winCounter: winLossCounterInitial.win,
-    lossCounter: winLossCounterInitial.loss,
     showGameTimer: showGameTimer,
     showChessTimers: showChessTimers,
     hideDelay: hideDelay,
@@ -171,6 +186,7 @@ var appData = {
     rollupMode: rollupMode,
     recentCardsQuantityToShow: recentCardsQuantityToShow,
     recentCards: recentCards,
+    minToTray: minToTray,
 }
 
 var parseVersionString = (versionStr) => {
@@ -240,6 +256,83 @@ request.get({
   }
 })
 
+let deckFrequencySubLists = function (decklist) {
+  let card_count = -1;
+  let sublists = [];
+  let current_sublist = null;
+  for ( card of decklist ) {
+    if (card.count_in_deck != card_count){
+      if ( current_sublist != null ){
+        sublists.push(current_sublist);
+      }
+      current_sublist = [];
+      card_count = card.count_in_deck;
+    }
+    current_sublist.push(card);
+  }
+  sublists.push(current_sublist);
+  return sublists;
+};
+
+let sortDecklist = function (decklist) {
+    if (decklist.length === 0) {
+        return decklist;
+    }
+    if (sortMethod.startsWith("draw")) {
+        let subsort = sortMethod.split('-')[1];
+        if ( subsort === undefined ){
+          subsort = 'name';
+        }
+        return drawSort(decklist,subsort);
+    } else if (sortMethod == "emerald") {
+        return emeraldSort(decklist);
+    } else if (sortMethod == "color") {
+        return colorSort(decklist);
+    }
+}
+
+let emeraldSort = function (decklist) {
+   return decklist.sort(
+            function (a, b) {
+                // Sort by cardtype first
+                return cardtypeCompare(a.card_type, b.card_type)
+                        // Then sort by mana cost
+                        || manaCostCompare(a, b)
+                        // Then sort by name
+                        || nameCompare(a.pretty_name, b.pretty_name);
+            }
+    );
+};
+
+let drawSort = function (decklist,subsort) {
+  let sublists = deckFrequencySubLists(decklist);
+  let sorted = [];
+  for (sublist of sublists){
+    if (subsort === 'name') {
+      sorted.push(sublist.sort( (a,b) => { return nameCompare(a.pretty_name,b.pretty_name); } ));
+    } else if ( subsort === 'emerald' ) {
+      sorted.push(emeraldSort(sublist));
+    } else if ( subsort === 'color' ) {
+      sorted.push(colorSort(sublist));
+    }
+  }
+  //flatten
+  return [].concat.apply([], sorted);
+}
+
+let colorSort = function (decklist) {
+    return decklist.sort(
+            function (a, b) {
+                // Sort by cmc first
+                return manaCostCompare(a, b)
+                        // then sort by color
+                        || colorCompare(a,b)
+                        // Then sort by name
+                        || nameCompare(a.pretty_name, b.pretty_name);
+            }
+    );
+}
+
 let cardtypeCompare = function (a, b) {
     // Creatures -> Planeswalkers -> Enchantments -> Artifacts -> Sorceries -> Instants -> Non-Basic Lands -> Basic Lands
     if (a.includes("Creature")) {
@@ -308,28 +401,37 @@ let cardtypeCompare = function (a, b) {
     return 0;
 };
 
-let manaCostCompare = function (a, b) {
-    let cmcA = 0;
-    let cmcB = 0;
-    let cmcCompute = function (manaSymbol) {
-        // Put X spells at the end
-        if (manaSymbol === "X") {
-            return 100;
-        }
-        // Generic mana amount
-        let intValue = parseInt(manaSymbol);
-        if (!isNaN(intValue)) {
-            return intValue;
-        }
+let cmcCompute = function (card) {
+  //put lands at bottom
+  if ( card.card_type === 'Land'){
+    return 1000;
+  }
+
+  let total = 0;
+  for (let manaSymbol of card.cost) {
+    // Put X spells at the end
+    if (manaSymbol === "X") {
+        total += 100;
+    } else {
+      // Generic mana amount
+      let intValue = parseInt(manaSymbol);
+      if (!isNaN(intValue)) {
+        total += intValue;
+
+      } else {
         // Colored mana
-        return 1;
-    };
-    for (let manaSymbol of a) {
-        cmcA += cmcCompute(manaSymbol);
+        total += 1;
+      }
     }
-    for (let manaSymbol of b) {
-        cmcB += cmcCompute(manaSymbol);
-    }
+  }
+
+  return total;
+};
+
+let manaCostCompare = function (a, b) {
+    let cmcA = cmcCompute(a);
+    let cmcB = cmcCompute(b);
+
     if (cmcA < cmcB) {
         return -1;
     }
@@ -349,23 +451,80 @@ let nameCompare = function (a, b) {
     return 0;
 };
 
+/**
+ * Rank color combos.
+ *
+ * Each color is assigned value
+ * W=1 U=2 B=4 R=8 G=16 C=32 L=+32
+ *
+ * Array holds total color values in sorted order.
+ * To find sort position of particular card,
+ * get index of color combo value
+ */
+
+let color_ranks = [
+  1,2,4,8,16,     // W U B G R
+  3,5,9,17,       // WU WB WR WG
+  6,10,18,        // UB UR UG
+  12,20,          // BR BG
+  24,             // RG
+  7,11,19,        // WUB WUR WUG
+  13,21,          // WBR WBG
+  25,             // WRG
+  14,22,26,       // UBR UBG URG
+  28,             // BRG
+  15,23,27,29,30, // WUBR WUBG WURG WBRG UBRG
+  31,             // WUBRG
+  32,             // C
+  33,34,36,40,48, // L W U B G R
+  35,37,41,49,    // L WU WB WR WG
+  38,42,50,       // L UB UR UG
+  44,52,          // L BR BG
+  56,             // L RG
+  39,43,51,       // L WUB WUR WUG
+  45,53,          // L WBR WBG
+  57,             // L WRG
+  46,54,58,       // L UBR UBG URG
+  60,             // L BRG
+  47,55,59,61,62, // L WUBR WUBG WURG WBRG UBRG
+  63,             // L WUBRG
+  64              // L C
+]
+
+let colorCompare = function (a,b) {
+  let a_index = color_ranks.indexOf(getColorValue(a));
+  let b_index = color_ranks.indexOf(getColorValue(b));
+  if ( a_index < b_index ) {
+    return -1;
+  } else if ( a_index === b_index ) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+let getColorValue = function(card) {
+  let value = card.cardtype === 'Land' ? 32 : 0
+  for ( color of card.colors) {
+    if ( color === 'White' ){
+      value += 1
+    } else if ( color === 'Blue' ) {
+      value += 2
+    } else if ( color === 'Black' ) {
+      value += 4
+    } else if ( color === 'Red') {
+      value += 8
+    } else if ( color === 'Green' ){
+      value += 16
+    } else if ( color === 'Colorless' ){
+      value += 32
+    }
+  }
+  return value;
+}
+
 rivets.formatters.drawStatsSort = function(decklist) {
-    if (decklist.length === 0) {
-        return decklist;
-    }
-    if (sortMethod == "draw") {
-        return decklist;
-    } else if (sortMethod == "emerald") {
-        return decklist.sort(
-                function (a, b) {
-                    // Sort by cardtype first
-                    return cardtypeCompare(a.card_type, b.card_type)
-                        // Then sort by mana cost
-                        || manaCostCompare(a.cost, b.cost)
-                        // Then sort by name
-                        || nameCompare(a.card, b.card);
-                });
-    }
+    return sortDecklist(decklist);
 };
 
 rivets.formatters.drawStatsMergeDuplicates = function(decklist) {
@@ -382,22 +541,7 @@ rivets.formatters.drawStatsMergeDuplicates = function(decklist) {
 };
 
 rivets.formatters.decklistSort = function(decklist) {
-    if (decklist.length === 0) {
-        return decklist;
-    }
-    if (sortMethod == "draw") {
-        return decklist;
-    } else if (sortMethod == "emerald") {
-        return decklist.sort(
-            function (a, b) {
-                // Sort by cardtype first
-                return cardtypeCompare(a.card_type, b.card_type)
-                        // Then sort by mana cost
-                        || manaCostCompare(a.cost, b.cost)
-                        // Then sort by name
-                        || nameCompare(a.pretty_name, b.pretty_name);
-        });
-    }
+    return sortDecklist(decklist);
 };
 
 rivets.formatters.decklistMergeDuplicates = function(decklist) {
@@ -566,14 +710,13 @@ function resizeWindow() {
 
     let totalHeight = 10;
 
-    $("#tracker-header").children().each(function(c, e) {
-        if(e.style.display != "none" && !e.classList.contains("no-height-contribution"))
-            totalHeight += $(e).outerHeight(true);
-    });
+    totalHeight += $('#tracker-header').outerHeight(true);
+
     $("#tracker-body").children().each(function(c, e) {
         if(e.style.display != "none" && !e.classList.contains("no-height-contribution"))
             totalHeight += $(e).outerHeight(true);
     });
+
     bounds = browserWindow.getBounds()
     container.style.height = "" + parseInt(totalHeight) + "px"
     if (zoom > 0.85) {
@@ -600,15 +743,28 @@ function resizeWindow() {
 }
 
 function populateDeck(elem) {
-    deckID = elem.getAttribute('data-deckid')
-    $.each(appData.player_decks, (i, v) => {
-        if (v.deck_id == deckID) {
-            appData.selected_list = v.cards;
-            appData.selected_list_name = v.pool_name;
-            appData.list_selected = true;
-            appData.no_list_selected = false;
-        }
-    })
+    deckID = elem.getAttribute('data-deckid');
+    appData.activeDeck = deckID;
+    deck = getDeckById(deckID);
+
+    const types = ['daily','alltime'];
+    $.each(types, (i, type) => {
+      if (appData.winLossObj[type][deckID] === undefined) {
+        appData.winLossObj[type][deckID] = {win: 0, loss: 0, name: deck.pool_name}
+      }
+      const counter_prefix = type === 'daily' ? 'dailyDeck' : 'deck';
+      appData[counter_prefix + 'WinCounter'] = appData.winLossObj[type][deckID].win;
+      appData[counter_prefix + 'LossCounter'] = appData.winLossObj[type][deckID].loss;
+    });
+
+    if (deck != null){
+      appData.selected_list = deck.cards;
+      appData.selected_list_name = deck.pool_name;
+      appData.list_selected = true;
+      appData.no_list_selected = false;
+      appData.showDeckCounters = true;
+    }
+
     resizeWindow()
 }
 
@@ -622,6 +778,12 @@ function exitDraft() {
 function unpopulateDecklist() {
     appData.list_selected = false;
     appData.no_list_selected = true;
+    appData.activeDeck = 'total';
+    appData.deckWinCounter = 0;
+    appData.deckLossCounter = 0;
+    appData.dailyDeckWinCounter = 0;
+    appData.dailyDeckLossCounter = 0;
+    appData.showDeckCounters = false;
 
     appData.game_in_progress = false;
     appData.show_available_decklists = true;
@@ -718,21 +880,53 @@ function cleanErrors(errors) {
   errors.forEach(error => cleanError(error, 0))
 }
 
+function getDeckById(deckID){
+  return appData.player_decks.find(x => x.deck_id == deckID) || false
+}
+
 function uploadGame(attempt, gameData, errors) {
   if (!errors) {
     errors = []
   }
   if (attempt == 0) { // only set local winloss counters on first upload attempt
+    const victory = gameData.players[0].name === gameData.winner;
 
-    if (gameData.players[0].name == gameData.winner) {
-      appData.winCounter++
-    } else {
-      appData.lossCounter++
+    //only update per-deck win/loss for decks we know about
+    const deckID = gameData.players[0].deck.deckID;
+    if (appData.player_decks.map(deck=>deck.deck_id).includes(deckID)) {
+      const types = ['daily','alltime'];
+      $.each(types, (i, type) => {
+        if(appData.winLossObj[type][deckID]) {
+          if (victory) {
+            appData.winLossObj[type][deckID].win++;
+          } else {
+            appData.winLossObj[type][deckID].loss++;
+          }
+        } else {
+          if (victory) {
+            appData.winLossObj[type][deckID] = {win: 1, loss: 0, name: gameData.players[0].deck.poolName};
+          } else {
+            appData.winLossObj[type][deckID] = {win: 0, loss: 1, name: gameData.players[0].deck.poolName};
+          }
+        }
+      });
+
+      ipcRenderer.send('updateWinLossCounters', {
+        key: deckID,
+        value: {alltime: appData.winLossObj['alltime'][deckID],daily:appData.winLossObj['daily'][deckID]}
+      })
     }
-    ipcRenderer.send('settingsChanged', {
-      key: "winLossCounter",
-      value: {win: appData.winCounter, loss: appData.lossCounter}
-    })
+    if (victory) {
+      appData.winLossObj.alltime.total.win++;
+      appData.winLossObj.daily.total.win++;
+    } else {
+      appData.winLossObj.alltime.total.loss++;
+      appData.winLossObj.daily.total.loss++;
+    }
+    ipcRenderer.send('updateWinLossCounters', {
+      key: "total",
+      value: {alltime:appData.winLossObj.alltime.total,daily:appData.winLossObj.daily.total}
+    });
   }
 
   return new Promise((resolve, reject) => {
@@ -861,6 +1055,32 @@ let onMessage = (data) => {
               // pause each player's timer. we'll unpause them soon, with a decisionPlayerChange event.
               opponentTimer.pause()
               heroTimer.pause()
+
+              //set the stats to report for this deck, if known
+              //otherwise, use total stats
+              if (appData.player_decks.map(deck=>deck.deck_id).includes(data.deck_id)){
+                const deck = getDeckById(data.deck_id);
+                appData.activeDeck = data.deck_id;
+                const types = ['daily','alltime'];
+                $.each(types, (i, type) => {
+                  if (!(data.deck_id in appData.winLossObj[type])){
+                    appData.winLossObj[type][appData.activeDeck] = {win: 0, loss: 0, name: deck.pool_name};
+                  }
+                });
+                appData.deckWinCounter = appData.winLossObj['alltime'][data.deck_id].win;
+                appData.deckLossCounter = appData.winLossObj['alltime'][data.deck_id].loss;
+                appData.dailyDeckWinCounter = appData.winLossObj['daily'][data.deck_id].win;
+                appData.dailyDeckLossCounter = appData.winLossObj['daily'][data.deck_id].loss;
+                appData.showDeckCounters = true;
+
+              } else {
+                appData.activeDeck = 'total';
+                appData.deckWinCounter = 0;
+                appData.deckLossCounter = 0;
+                appData.dailyDeckWinCounter = 0;
+                appData.dailyDeckLossCounter = 0;
+                appData.showDeckCounters = false;
+              }
             }
             appData.game_in_progress = true;
             appData.show_available_decklists = false;
@@ -869,7 +1089,7 @@ let onMessage = (data) => {
             $(".cardsleft").removeClass("gamecomplete")
 
             appData.deck_name = data.draw_odds.deck_name;
-            appData.opponent_hand = data.opponent_hand
+            appData.opponent_hand = data.opponent_hand;
 
             if (staticMode) {
               appData.draw_stats = data.draw_odds.original_deck_stats;
@@ -908,11 +1128,11 @@ let onMessage = (data) => {
             console.log(e)
           })
         } else if (data.inventory_update) {
-//          passThrough("tracker-api/inventory-update", data.inventory_update, data.player_key).catch(e => {
-//          // TODO: check for wildcard redemptions? or should we do that in the API?
-//            console.log("error uploading inventory-update data: ")
-//            console.log(e)
-//          })
+         // passThrough("tracker-api/inventory-update", data.inventory_update, data.player_key).catch(e => {
+         // // TODO: check for wildcard redemptions? or should we do that in the API?
+         //   console.log("error uploading inventory-update data: ")
+         //   console.log(e)
+         // })
         } else if (data.inventory) {
           if (data.inventory.vaultProgress) {
             appData.lastVaultProgress = data.inventory.vaultProgress;
@@ -922,10 +1142,10 @@ let onMessage = (data) => {
               value: appData.lastVaultProgress
             })
           }
-//          passThrough("tracker-api/inventory", data.inventory, data.player_key).catch(e => {
-//            console.log("error uploading inventory data: ")
-//            console.log(e)
-//          })
+         // passThrough("tracker-api/inventory", data.inventory, data.player_key).catch(e => {
+         //   console.log("error uploading inventory data: ")
+         //   console.log(e)
+         // })
         } else if (data.collection) {
           var cardQuantity;
           if (data.collection) {
@@ -938,7 +1158,7 @@ let onMessage = (data) => {
                         if(isNaN(cardQuantity)) {
                           cardQuantity = data.collection[cardID];
                         }
-                        if(cardQuantity > 0) { 
+                        if(cardQuantity > 0) {
                           objectToPush.cardsObtained[cardID] = cardQuantity;
                         }
                       }
@@ -961,10 +1181,10 @@ let onMessage = (data) => {
               value: appData.lastCollection
             })
 
-//            passThrough("tracker-api/collection", data.collection, data.player_key).catch(e => {
-//              console.log("error uploading collections data: ")
-//              console.log(e)
-//            })
+           // passThrough("tracker-api/collection", data.collection, data.player_key).catch(e => {
+           //   console.log("error uploading collections data: ")
+           //   console.log(e)
+           // })
           }
         } else if (data.draftPick) {
           passThrough("tracker-api/draft-pick", data.draftPick, data.player_key).catch(e => {
@@ -995,7 +1215,15 @@ let onMessage = (data) => {
             $.each(data.decks, (key, value) => {
                 new_decks.push(value)
             })
-            appData.player_decks = new_decks;
+            appData.player_decks = new_decks.sort((a,b) => {
+              if (a.pool_name < b.pool_name ){
+                return -1;
+              } else if ( a.pool_name === b.pool_name ){
+                return 0;
+              } else {
+                return 1;
+              }
+            });
             appData.no_decks = false;
         }
     }
@@ -1101,8 +1329,17 @@ ipcRenderer.on('settingsChanged', () => {
   appVersionStr = remote.getGlobal('version');
   appData.appVersionStr = appVersionStr
 
-  showWinLossCounter = remote.getGlobal('showWinLossCounter');
-  appData.showWinLossCounter = showWinLossCounter
+  showTotalWinLossCounter = remote.getGlobal('showTotalWinLossCounter');
+  appData.showTotalWinLossCounter = showTotalWinLossCounter
+
+  showDeckWinLossCounter = remote.getGlobal('showDeckWinLossCounter');
+  appData.showDeckWinLossCounter = showDeckWinLossCounter
+
+  showDailyTotalWinLossCounter = remote.getGlobal('showDailyTotalWinLossCounter');
+  appData.showDailyTotalWinLossCounter = showDailyTotalWinLossCounter
+
+  showDailyDeckWinLossCounter = remote.getGlobal('showDailyDeckWinLossCounter');
+  appData.showDailyDeckWinLossCounter = showDailyDeckWinLossCounter
 
   showVaultProgress = remote.getGlobal('showVaultProgress');
   appData.showVaultProgress = showVaultProgress
@@ -1125,9 +1362,8 @@ ipcRenderer.on('settingsChanged', () => {
   recentCards = remote.getGlobal('recentCards');
   appData.recentCards = recentCards
 
-  winLossCounter = remote.getGlobal('winLossCounter');
-  appData.winCounter = winLossCounter.win
-  appData.lossCounter = winLossCounter.loss
+  minToTray = remote.getGlobal('minToTray');
+  appData.minToTray = minToTray
 
   let useTheme = remote.getGlobal("useTheme")
   let themeFile = remote.getGlobal("themeFile")
@@ -1187,5 +1423,31 @@ ipcRenderer.on('settingsChanged', () => {
   }
   resizeWindow()
 })
+
+ipcRenderer.on('counterChanged', (e,new_wlc) => {
+  appData.winLossObj = new_wlc;
+
+  if (appData.activeDeck === 'total') {
+      appData.deckWinCounter = 0;
+      appData.deckLossCounter = 0;
+      appData.dailyDeckWinCounter = 0;
+      appData.dailyDeckLossCounter = 0;
+      appData.showDeckCounters = false;
+  } else {
+    appData.deckWinCounter = appData.winLossObj.alltime[appData.activeDeck].win;
+    appData.deckLossCounter = appData.winLossObj.alltime[appData.activeDeck].loss;
+    if (appData.winLossObj.daily[appData.activeDeck] === undefined){
+      appData.winLossObj.daily[appData.activeDeck] = {win:0,loss:0,name:getDeckById(appData.activeDeck).pool_name};
+    }
+    appData.dailyDeckWinCounter = appData.winLossObj.daily[appData.activeDeck].win;
+    appData.dailyDeckLossCounter = appData.winLossObj.daily[appData.activeDeck].loss;
+    appData.showDeckCounters = true;
+  }
+
+  appData.totalWinCounter = appData.winLossObj.alltime.total.win;
+  appData.totalLossCounter = appData.winLossObj.alltime.total.loss;
+  appData.dailyTotalWinCounter = appData.winLossObj.daily.total.win;
+  appData.dailyTotalLossCounter = appData.winLossObj.daily.total.loss;
+});
 
 console.timeEnd('init')

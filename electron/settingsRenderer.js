@@ -1,4 +1,5 @@
 const { remote, ipcRenderer, shell } = require('electron')
+const {dialog, Menu, MenuItem,} = remote
 const fs = require('fs')
 
 const API_URL = remote.getGlobal("API_URL")
@@ -37,7 +38,15 @@ var settingsData = {
   themeFile: remote.getGlobal('themeFile'),
   mouseEvents: remote.getGlobal('mouseEvents'),
   leftMouseEvents: remote.getGlobal('leftMouseEvents'),
-  showWinLossCounter: remote.getGlobal('showWinLossCounter'),
+  showTotalWinLossCounter: remote.getGlobal('showTotalWinLossCounter'),
+  showDeckWinLossCounter: remote.getGlobal('showDeckWinLossCounter'),
+  showDailyTotalWinLossCounter: remote.getGlobal('showDailyTotalWinLossCounter'),
+  showDailyDeckWinLossCounter: remote.getGlobal('showDailyDeckWinLossCounter'),
+  winLossObj: remote.getGlobal('winLossCounter'),
+  counterDeckList: [],
+  dailyCounterDeckList: [],
+  totalWinLossCounter: null,
+  dailyTotalWinLossCounter: null,
   lastCollection: remote.getGlobal('lastCollection'),
   lastVaultProgress: remote.getGlobal('lastVaultProgress'),
   showVaultProgress: remote.getGlobal('showVaultProgress'),
@@ -49,6 +58,7 @@ var settingsData = {
   rollupMode: remote.getGlobal('rollupMode'),
   recentCards: remote.getGlobal('recentCards'),
   recentCardsQuantityToShow: remote.getGlobal('recentCardsQuantityToShow'),
+  minToTray: remote.getGlobal('minToTray'),
   runFromSource: remote.getGlobal('runFromSource'),
   sortMethodSelected: remote.getGlobal('sortMethod'),
   useFlat: remote.getGlobal('useFlat'),
@@ -59,12 +69,23 @@ var settingsData = {
   trackerID: remote.getGlobal('trackerID'),
   customStyleFiles: [],
   sortingMethods: [
-    {id: "draw", text: "By likelihood of next draw (default)",
-    help: "This method shows cards in order from most likely to draw on top of the list to least likely to draw on the bottom, with no other considerations."},
+    {id: "draw", text: "By likelihood of next draw, then by name (default)",
+    help: "This method shows cards in order from most likely to draw on top of the list to least likely to draw on the bottom, followed by name within a given likelihood."},
     {id: "emerald", text: '"Emerald" method',
-    help: "This method sorts cards by card type, then by cost, then by name."}
+    help: "This method sorts cards by card type, then by cost, then by name."},
+    {id: "color", text: 'Sorts first by cost, then color, then name.',
+    help: "This method sorts cards first by cost, then color, then by name."},
+    {id: "draw-emerald", text: 'By likelihood of next draw, then by the "Emerald" method',
+    help: "This method sorts cards by likelihood of next draw, then, within a likelihood, by card type, then by cost, then by name."},
+    {id: "draw-color", text: 'By likelihood of next draw, then by cost, color, and name',
+    help: "This method sorts cards by likelihood of next draw, then, by cost, then color, then by name."},
   ],
 }
+
+settingsData.counterDeckList = counterDecks(settingsData.winLossObj.alltime);
+settingsData.dailyCounterDeckList = counterDecks(settingsData.winLossObj.daily);
+settingsData.totalWinLossCounter = settingsData.winLossObj.alltime.total;
+settingsData.dailyTotalWinLossCounter = settingsData.winLossObj.daily.total;
 
 let commitFile = "version_commit.txt"
 let buildFile = "version_build.txt"
@@ -82,7 +103,6 @@ fs.readFile(buildFile, "utf8", (err, data) => {
   settingsData.build = data;
 })
 
-const { Menu, MenuItem, dialog } = remote
 const menu = new Menu()
 const menuItem = new MenuItem({
   label: 'Inspect Element',
@@ -98,6 +118,36 @@ if (settingsData.debug) {
     rightClickPosition = {x: e.x, y: e.y}
     menu.popup(remote.getCurrentWindow())
   }, false)
+}
+
+ipcRenderer.on('counterChanged', (e,new_wlc) => {
+  settingsData.winLossObj = new_wlc;
+  settingsData.counterDeckList = counterDecks(settingsData.winLossObj.alltime);
+  settingsData.dailyCounterDeckList = counterDecks(settingsData.winLossObj.daily);
+  settingsData.totalWinLossCounter = settingsData.winLossObj.alltime.total;
+  settingsData.dailyTotalWinLossCounter = settingsData.winLossObj.daily.total;
+});
+
+/*
+ * Format decks in winLossCounter to array for display in rivets.
+ */
+function counterDecks(winLossObj){
+  let decks = [];
+  for (let key in winLossObj){
+    if (key == 'total') {
+      continue;
+    }
+    decks.push({'id':key,'name': winLossObj[key]['name'], 'win':winLossObj[key]['win'],'loss':winLossObj[key]['loss']});
+  }
+  return decks.sort((a,b) => {
+    if ( a.name < b.name ){
+      return -1;
+    } else if ( a.name == b.name ) {
+      return 0;
+    } else {
+      return 1;
+    }
+  } );
 }
 
 rivets.formatters.countcollection = function(collection) {
@@ -194,8 +244,12 @@ rivets.binders.recentcardsbinder = (el, cardsObtained) => {
   }
 }
 
+rivets.binders.deckid = function(el, value) {
+  el.setAttribute('data-deckid', value);
+}
+
 function recentCardsSectionClickHandler(event) {
-  var revealed = $(event.target).siblings(".recent-cards-container").is(":hidden"); 
+  var revealed = $(event.target).siblings(".recent-cards-container").is(":hidden");
   if(revealed) {
     $(event.target).siblings(".recent-cards-container").slideDown("fast");
   } else {
@@ -203,7 +257,7 @@ function recentCardsSectionClickHandler(event) {
   }
 }
 
-
+var firstCounterAdjButtonClicked = true;
 document.addEventListener("DOMContentLoaded", function(event) {
   rivets.bind(document.getElementById('container'), settingsData)
 
@@ -281,10 +335,80 @@ document.addEventListener("DOMContentLoaded", function(event) {
     let sortMethodSelected = $("#sorting-method-select").val()
     ipcRenderer.send('settingsChanged', {key: "sortMethod", value: sortMethodSelected})
   })
-  $("#resetWinLoss").click((e) => {
-    console.log("resetting win/loss")
-    ipcRenderer.send('settingsChanged', {key: "winLossCounter", value: {win: 0, loss: 0}})
-  })
+  $(".reset-button").click((e) => {
+    const deck_id = e.target.getAttribute('data-deckid');
+    const is_daily = e.target.getAttribute('data-daily') === 'true';
+    const type = is_daily ? 'daily' : 'alltime';
+
+    let message = "Are you sure you want to reset (delete) ";
+    if (deck_id == 'all'){
+      message += 'all ' + ( is_daily ? 'daily ' : '' ) + 'win/loss counters?';
+    } else if (deck_id == 'all-decks' ){
+      message += 'all ' + ( is_daily ? 'daily ' : '' ) + 'deck win/loss counters?'
+    } else if (deck_id == 'total'){
+      message += 'the ' + ( is_daily ? 'daily ' : '' ) + 'total win/loss counter?'
+    } else {
+      message += 'the ' + ( is_daily ? 'daily ' : '' ) + settingsData.winLossObj[type][deck_id].name + ' win/loss counter?';
+    }
+    if (!dialog.showMessageBox(remote.getCurrentWindow(), {'buttons': ['Cancel','Ok'],'message':message,})){
+      return;
+    }
+
+    console.log("resetting win/loss");
+    let new_wlc = settingsData.winLossObj;
+
+    if (deck_id == 'all') {
+      new_wlc[type] = {'total':{'win':0,'loss':0}};
+    } else if (deck_id == 'all-decks') {
+      new_wlc[type] = {'total':settingsData.winLossObj[type].total};
+    } else if (deck_id == 'total'){
+      new_wlc[type].total = {'win':0,'loss':0};
+    } else {
+      /*
+        delete prop isn't working. Returns false and doesn't remove prop.
+        Old technique of setting to undefined then toString back to JSON isn't working anymore either
+        Until I can figure out why, here's a hack.
+      */
+
+      let decks_wlc = {};
+      for ( key in settingsData.winLossObj[type] ){
+        if ( key === deck_id ){
+          continue;
+        }
+        decks_wlc[key] = settingsData.winLossObj[type][key];
+      }
+      new_wlc[type] = decks_wlc;
+    }
+    ipcRenderer.send('updateWinLossCounters', {key: 'all', value: new_wlc})
+  });
+
+  $(".counter-adj-button").click((e) => {
+    /**
+      * Ugly Hack Incoming!!!
+      *
+      * For some strange reason the first firing of this event updates the winLossObj just fine
+      * as well as updating mainWindow display, however it would not update settingsWindow.
+      * Any subsequent button presses (event firings, really) make the display update fine.
+      * So, as a workaround, on the first click, send a change event, but post no actual changes.
+      * This pushes us through the bug and lets the display update perfectly.
+      */
+    if (firstCounterAdjButtonClicked){
+      firstCounterAdjButtonClicked = false;
+      ipcRenderer.send('updateWinLossCounters', {key: 'all', value: settingsData.winLossObj})
+    }
+
+    const deck_id = e.target.getAttribute('data-deckid');
+    const winloss = e.target.getAttribute('data-winloss');
+    const up = e.target.getAttribute('data-direction') === 'up';
+    const is_daily = e.target.getAttribute('data-daily') === 'true';
+    const type = is_daily ? 'daily' : 'alltime';
+    let new_wlc = {daily:settingsData.winLossObj.daily[deck_id],alltime:settingsData.winLossObj.alltime[deck_id]};
+    new_wlc[type][winloss] += up ? 1 : -1;
+
+    ipcRenderer.send('updateWinLossCounters', {key: deck_id, value: new_wlc})
+  });
+
+
   $("#resetGameHistory").click((e) => {
     console.log("resetting gameHstory")
     ipcRenderer.send('clearGameHistory')
