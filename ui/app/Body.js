@@ -4,7 +4,7 @@ import routes from './constants/routes';
 import App from './containers/App';
 import CardList from './containers/DeckPageCardList';
 import DeckList from './containers/DeckPageDeckList';
-import GameDeck from './containers/GamePageCardList';
+import GameDeck from './containers/GamePage';
 
 export default () => (
   <App>

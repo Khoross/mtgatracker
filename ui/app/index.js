@@ -1,12 +1,12 @@
 import React from 'react';
 import { render } from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
-import { remote } from 'electron';
+import { remote, ipcRenderer } from 'electron';
 import Root from './containers/Root';
 import { configureStore, history } from './store/configureStore';
 import './app.global.css';
 import ReconnectingWebSocket from 'reconnectingwebsocket'
-import {updateDecks, gameActivity, updateGameState, endGame, switchTimers} from './actions'
+import {updateDecks, gameActivity, updateGameState, endGame, switchTimers, updateSettingsBatch} from './actions'
 
 const store = configureStore();
 let port = 5678;
@@ -19,7 +19,6 @@ let onMessage = (data) => {
       store.dispatch(updateDecks(data.decks))
       return
     case "game_state":
-      console.log(data)
       if(!data.match_complete) {
         //dispatch a game update event
         //this is a thunk
@@ -37,6 +36,7 @@ let onMessage = (data) => {
       return
     case "message":
       if(data.decisionPlayerChange) {
+        console.log(data)
         store.dispatch(switchTimers(data.heroIsDeciding))
       }
       return
@@ -45,7 +45,8 @@ let onMessage = (data) => {
   }
 }
 
-console.log(remote.getGlobal('settings'))
+store.dispatch(updateSettingsBatch(remote.getGlobal('settings')))
+ipcRenderer.on('settingsChanged', () => store.dispatch(updateSettingsBatch(remote.getGlobal('settings'))))
 
 ws.onmessage = onMessage;
 

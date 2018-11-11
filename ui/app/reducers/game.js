@@ -10,6 +10,15 @@ const idReducer = (state = '', action) => {
     }
 }
 
+const deckIDReducer = (state = '', action) => {
+    switch(action.type){
+        case START_GAME:
+            return action.deckID
+        default:
+            return state
+    }
+}
+
 const nameReducer = (state = '', action) => {
     switch(action.type){
         case START_GAME:
@@ -93,6 +102,7 @@ const timersReducer = (state = {active: false}, action) => {
 
 export default combineReducers({
     gameID: idReducer,
+    deckID: deckIDReducer,
     name: nameReducer,
     cards: cardsReducer,
     timers: timersReducer

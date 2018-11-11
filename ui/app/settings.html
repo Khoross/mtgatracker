@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings</title>
+    <link rel="stylesheet" type="text/css" href="settings_style.css">
+    <link rel="stylesheet" type="text/css" href="vendor/photon/photon.css">
+    <link rel="stylesheet" type="text/css" href="vendor/font-awesome/css/font-awesome.css">
+    <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+    <link href="vendor/toggle/bootstrap-toggle.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="container">
+  <div class="pane-group">
+    <div class="pane pane-sm sidebar">
+      <nav class="nav-group">
+        <h5 class="nav-group-title">Tracker Settings</h5>
+        <a value="about" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="about-nav">
+          <span class="icon icon-info"></span>
+          About
+        </a>
+        <a value="general" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="general-nav">
+          <span class="icon icon-home"></span>
+          General
+        </a>
+        <a value="wlc" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="wlc-nav">
+          <span class="icon icon-trophy"></span>
+          Win/Loss Counters
+        </a>
+        <a value="theme" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="theme-nav">
+          <span class="icon icon-brush"></span>
+          Themes
+        </a>
+      </nav>
+      <nav class="nav-group">
+        <h5 class="nav-group-title">Account Settings</h5>
+        <a value="privacy" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="privacy-nav">
+          <span class="icon icon-lock"></span>
+          Privacy
+        </a>
+        <a value="account" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="account-nav">
+          <span class="icon icon-user"></span>
+          Inspector
+        </a>
+        <a value="collection" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="collection-nav">
+          <span class="icon icon-archive"></span>
+          Collection
+        </a>
+      </nav>
+
+      <nav class="nav-group">
+        <h5 class="nav-group-title">Other Stuff</h5>
+        <a value="supporters" rv-settingspaneactive="settingsPaneIndex" class="nav-group-item" id="supporters-nav">
+          <span class="icon icon-heart"></span>
+          Supporters
+        </a>
+      </nav>
+    </div>
+    <div class="pane">
+      <div id="about-pane" value="about" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <h3><i>About MTGATracker</i></h3>
+            <hr />
+            <p class="about-p disclaimer">MTGA Tracker is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+            <hr />
+            <p class="about-p"><b>Version:</b> { version } <span class="disclaimer">(commit <a rv-ghlink="commit">{ commit | short }</a> / build <a rv-appveyorlink="build">{ build }</a>)</span><i rv-if="firstRun">(MTGATracker cannot check for updates on first launch after installation or an update)</i> <i rv-if="updateDownloading | andnot updateReady">(an update is downloading...)</i> <i rv-if="updateReady">(an update is ready!)</i></p>
+            <p class="about-p"><b>Homepage:</b> <a href="https://mtgatracker.com/">mtgatracker.com</a></p>
+            <p class="about-p"><b>Privacy:</b> <a href="https://github.com/shawkinsl/mtga-tracker/blob/master/legal/privacy.md">privacy.md</a></p>
+            <p class="about-p"><b>Documentation:</b> <a href="https://github.com/shawkinsl/mtga-tracker/blob/master/README.md">README.md</a></p>
+            <p class="about-p"><b>Inspector:</b> <a href="https://inspector.mtgatracker.com/">inspector.mtgatracker.com</a></p>
+            <br />
+
+            <h4>Current Vault Progress: { lastVaultProgress }%</h4>
+
+            <br />
+            <h3>Release notes for 4.5.3</h3>
+            <p>MTGATracker had <b>TONS</b> of support from Open Source contributors this cycle.
+            Thanks so much to everyone who put some code in!!</p>
+            <ul>
+              <li class="about-p">
+                More actions are now recorded in the Action Log, including:
+                <ul>
+                  <li>Cards being moved to the graveyard or to exile</li>
+                  <li>Lands played for turn</li>
+                  <li>Card draws</li>
+                  <li>Player's opening hand and any mulligans taken</li>
+                </ul>
+              </li>
+              <li>
+                Fixed the main font--yes, this is how MTGATracker was always supposed to look.
+              </li>
+              <li>
+                Fixed split-card tracking (thanks <b>WizardRubic</b>!)
+              </li>
+              <li>
+                Added new per-deck, and per-session win counters (thanks to the excellent & hard work by <b>Khoross and smkiewel</b>!)
+              </li>
+              <li>
+                Added a few new card-sorting methods for decklists (thanks <b>smkiewel</b>!)
+              </li>
+              <li>
+                Decks will now be sorted alphabetically in the main MTGATracker interface (thanks <b>smkiewel</b>!)
+              </li>
+              <li>
+                Added one of GabySpartz' precon deck names (thanks <b>WizardRubic</b>!)
+              </li>
+              <li>
+                MTGATracker can now optionally minimize to the OS tray (again, thanks to the work done by <b>WizardRubic</b>!)
+              </li>
+              <li>
+                Small UI continuity/display fix for the settings button
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.5.1 (4.5.0 hotfix)</h3>
+            <ul>
+              <li class="about-p">
+                Fixed an issue where settings files that were generated while KLD/AER/AKH/HOU were in MTGA
+                could cause MTGATracker to fail to operate.
+              </li>
+              <li>
+                Fixed a typo in the settings panel ("Glearly" someone should proofread a little better)
+              </li>
+              <li>
+                Fixed an issue where clearing the action log while the action log window is not open could cause
+                an error dialog
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.5.0</h3>
+            <ul>
+              <li class="about-p">
+                <b>A new feature appears!</b> 4.5.0 includes a brand new <b>Game Action History Log!</b>
+                This log contains the following action events:
+                <ul>
+                  <li>
+                    A spell or ability resolves
+                  </li>
+                  <li>
+                    A spell or ability targtes something
+                  </li>
+                  <li>
+                    A creature is attacking or is being blocked
+                  </li>
+                  <li>
+                    A player's life changes
+                  </li>
+                </ul>
+                Armed with these pieces of info, just about any game interaction should be retroactively understandable.
+                Gone are the days of looking away and missing an important event only to be left puzzling how your
+                opponent cleared your board with only three mana up. (It was probably Deafening Clarion, you're welcome.)
+                <br><br>
+                <img src="img/history_example.png" width="600px">
+                <br><br>
+                Even better, these logs will also be sent to Inspector, so that you always have a record of exciting games!
+                It's not quite a replay, but it's close!
+                <br><br>
+                To open the Game History window, click the new History icon from the main UI:
+                <br><br>
+                <img src="img/history_icon_example.png">
+                <br><br>
+              </li>
+              <li>
+                Fixed an issue that would cause an alert dialog when closing the tracker
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.2.3</h3>
+            <ul>
+              <li class="about-p">
+                Fixed an issue where GRN cards were not captured in collection exports
+              </li>
+              <li>
+                Fixed an issue with the display of split-cost mana symbols during a game
+              </li>
+              <li>
+                 <b>HUGE</b> thanks to <a href="https://github.com/WizardRubic">WizardRubic</a> for building out
+                 every other new feature in this release, including:
+              </li>
+              <li>
+                New "Recently Obtained" cards view in Settings / Collection.
+              </li>
+              <li>
+                If opened a second time, MTGATracker will detect the instance that is already running and bring it to
+                focus instead of creating a second window.
+              </li>
+            </ul>
+
+            <h3>Release notes for 4.2.2</h3>
+            <ul>
+              <li class="about-p">
+                You can now locate output_log.txt manually (may be required if you installed MTGA and MTGATracker
+                to separate / nonstandard disks)
+              </li>
+              <li>
+                MTGATracker now supports automatic <a href="https://ci.appveyor.com/project/shawkinsl/mtgatracker">Appveyor builds,</a> which
+                will help us release fixes faster!
+              </li>
+              <li>
+                "Installing" animation logo updated
+              </li>
+              <li>
+                Various minor security fixes
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.2.1</h3>
+            <ul>
+              <li class="about-p">
+                Fixed an issue introduced in 4.2.0 that caused many inventory-based functions to not work properly
+                (vault progress, card collections, etc)
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.2.0</h3>
+            <ul>
+              <li class="about-p">
+                Default hide method switched to "rollup" mode (change this in the general tab of Settings). Thanks
+                so much, <a href="https://github.com/mtgatracker/mtgatracker/pull/326">WizardRubic</a> for
+                implementing this!
+              </li>
+              <li>
+                Measures taken to reduce load on MTGATracker API
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.1.3</h3>
+            <ul>
+              <li class="about-p">
+                Support for masterpiece planeswalkers
+              </li>
+              <li>
+                You can now click and drag anywhere on the tracker that isn't already a clickable entity (thanks
+                <a href="https://github.com/mtgatracker/mtgatracker/commit/0996e4224e85017049274f77b1119cdee766ae89">zerot13</a>!)
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.1.2 (and 4.1.1)</h3>
+            <ul>
+              <li class="about-p">
+                Duplicate notifications will now only appear once with an incrementing badge counter
+              </li>
+              <li>
+                Fixed an issue that caused an error message during application updates
+              </li>
+              <li>
+                Deck names can no longer cover the zoom buttons (thank you
+                <a href="https://github.com/mtgatracker/mtgatracker/commit/a4a2d4038c4f90e8fdd10109ba01cf377067eddc">Alex</a>!)
+              </li>
+              <li>
+                Fixed an issue where some users may be unable to authorize Inspector
+                <a href="https://github.com/mtgatracker/mtgatracker/commit/6c0f4ec54f6ff2d1fcc539df603df1f543d7d69f">Ravi</a>!)
+                <b>If you're still unable to authorize Inspector or cannot see matches in Inspector, please contact us on
+                  Discord!</b>
+              </li>
+              <li>
+                Precon deck names will no longer show up as "?=?Loc/Decks/Precon/Precon_NPE_XY", and instead will
+                show their in-game deck name.
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 4.0.0</h3>
+            <ul>
+              <li class="about-p">
+                Support for Guilds of Ravnica! <i class="disclaimer">(Open Beta HYYYYYPE)</i>
+              </li>
+              <li>
+                We've redesigned MTGATracker's core model of trust to make Inspector logins easier
+              </li>
+              <li>
+                Notifications styling has been improved
+              </li>
+              <li>
+                Added our supporters to the Settings panel. We ❤ our supporters!
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 3.7.0</h3>
+            <ul>
+              <li class="about-p">
+                MTGATracker now tracks your collection. Watch out for an inspector update, soon!
+              </li>
+              <li>
+                MTGATracker can now export your MTGA collection (MTGGoldfish format)
+              </li>
+              <li>
+                MTGATracker now checks for updates more reliably, and shows if an update is processing in the settings window
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 3.6.1</h3>
+            <ul>
+              <li class="about-p">
+                MTGATracker now tracks how many mulligans you took in a game
+              </li>
+              <li>
+                MTGATracker will no longer allow you to zoom to impossible zoom levels
+              </li>
+              <li>
+                Electron version updated
+              </li>
+            </ul>
+
+            <br />
+            <h3>Release notes for 3.6.0</h3>
+            <ul>
+              <li class="about-p">
+                You can now authorize MTGATracker to upload data to your inspector account, in the "Inspector" tab.
+                <b>Note: This will be required after 9/10/18!</b> Read more on the
+                <a href="https://blog.mtgatracker.com/new-sign-in-requirements">MTGATracker blog.</a>
+              </li>
+              <li>
+                MTGATracker now tracks your draft history (thanks <a href="http://isharacomix.org">isharacomix</a> for
+                <a href="https://github.com/mtgatracker/mtgatracker/pull/275">the PR</a>!) Look for an inspector update
+                in the near future to see your draft history! (requires authorizing inspector)
+              </li>
+              <li>MTGATracker now tracks changes to your collection (vaultProgress, Gold, and Gems--requires authorizing inspector)</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.5.8</h3>
+            <ul>
+              <li class="about-p">Fixed a logparsing issue introduced in the 8/16 MTGA patch</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.5.7</h3>
+            <ul>
+              <li class="about-p">Support for Core Set 19 cards</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.5.5</h3>
+            <ul>
+              <li class="about-p">Cards that were played by you are now reported to Inspector</li>
+              <li class="about-p">Implemented "Chess Timers" in the tracker</li>
+              <li class="about-p">The hide timeout can now be configured in Settings</li>
+              <li class="about-p">Hide functionality can now be inverted (not recommended unless you know you want it)</li>
+              <li class="about-p">Improved logging between python backend and electron frontend</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.5.0</h3>
+            <ul>
+              <li class="about-p">Player who is "on the play" for each game now reported to inspector</li>
+              <li class="about-p">Rank change now reported to inspector</li>
+              <li class="about-p">Opponent's rank (before game) now reported to inspector</li>
+              <li class="about-p">Length of games (elapsed time & turn count) will now be reported to Inspector</li>
+              <li style="list-style-type:none">
+                <ul>
+                  <li class="about-p">(Keep an eye out for an inspector update soon!)</li>
+                </ul>
+              </li>
+              <li class="about-p">When using streamer mode, window will no longer resize dynamically</li>
+              <li class="about-p">Tracker will now remember previous zoom level on launch</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.4.2</h3>
+            <ul>
+              <li class="about-p">Implemented a new default theme; read more about it <a href="https://blog.mtgatracker.com/new-default-theme">here!</a></li>
+              <li class="about-p">Fixed an issue that could in rare occasions cause the tracker to get stuck / games to fail to upload to inspector</li>
+              <li class="about-p">MTGATracker will now be scrollable when the window is too large to fit on the screen</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.4.0</h3>
+            <ul>
+              <li class="about-p">Added new Draft Collection View feature. When drafting, MTGATracker will show you how many copies you own of each pick!</li>
+              <li class="about-p">Added Terms of Services agreeement</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.2.2</h3>
+            <ul>
+              <li class="about-p">Fixed an issue in 3.2.1 & under where the 2nd+ game in competitive draft would upload multiple times and/or cause upload error messages</li>
+              <li class="about-p">Added deck list sorting options to General tab of settings; sorting method "Emerald" implemented</li>
+              <li class="about-p">When using multiple arts for the same card in the same deck, that card will now be condensed into a single row</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.2.0</h3>
+            <ul>
+              <li class="about-p">Added support for KLD, AER, W17 sets</li>
+              <li class="about-p">Refactored json-blob parser task post-KLD patch</li>
+            </ul>
+            <br />
+
+            <h3>Release notes for 3.1.0</h3>
+            <ul>
+              <li class="about-p">Added Win / Loss counter (disable or reset in General tab)</li>
+              <li class="about-p">Added auto-hide on right click (disable or reset in General tab)</li>
+              <li class="about-p">Tracker will now open settings to about page on first launch after an update (so you can see this changelog!)</li>
+              <li class="about-p">Tracker will now attempt to upload at end of game slightly more aggressively, to help prevent lost inspector data</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="general-pane" value="general" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <p><i>Note: after changing these settings, you should restart MTGATracker to see effects</i></p>
+          </div>
+
+          <hr />
+
+          <div class="settings-row">
+            <input rv-checked="debug" class="tf-toggle" type="checkbox" key="debug" data-toggle="toggle"> Debug Mode
+          </div>
+          <div class="settings-row">
+            <input rv-checked="staticMode" class="tf-toggle" type="checkbox" key="staticMode" data-toggle="toggle"> Static Mode
+          </div>
+          <div class="settings-row">
+            <input rv-checked="useFrame" class="tf-toggle" type="checkbox" key="useFrame" data-toggle="toggle"> Streamer Mode
+          </div>
+          <div class="settings-row">
+            <input rv-checked="mtgaOverlayOnly" class="tf-toggle" type="checkbox" key="mtgaOverlayOnly" data-toggle="toggle"> Overlay on MTGA <i>only</i> ("Off" means overlay <i>always</i>)
+          </div>
+          <div class="settings-row">
+            <input rv-checked="minToTray" class="tf-toggle" type="checkbox" key="minToTray" data-toggle="toggle"> Minimize to tray
+          </div>
+
+          <hr />
+          <div class="settings-row">
+            <button id="log-select" class="btn btnbtn btn-secondary">Locate output_log.txt file</button>
+          </div>
+          Currently selected: <span class="disclaimer">{ logPath }</span>
+          <hr />
+
+          <div class="settings-row">
+            <input rv-checked="showErrors" class="tf-toggle" type="checkbox" key="showErrors" data-toggle="toggle"> Show error count in game
+          </div>
+          <div class="settings-row">
+            <input rv-checked="showInspector" class="tf-toggle" type="checkbox" key="showInspector" data-toggle="toggle"> Show inspector reminders
+          </div>
+          <div class="settings-row">
+            <input rv-checked="showGameTimer" class="tf-toggle" type="checkbox" key="showGameTimer" data-toggle="toggle"> Show Game Timer
+          </div>
+          <div class="settings-row">
+            <input rv-checked="showChessTimers" class="tf-toggle" type="checkbox" key="showChessTimers" data-toggle="toggle"> Show "Chess" Timers
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="showVaultProgress" class="tf-toggle" type="checkbox" key="showVaultProgress" data-toggle="toggle"> Show vault progress in main UI
+          </div>
+
+          <div class="settings-row">
+            <p>Minimum progress required to show vault progress in main UI</p>
+            <div class="slidecontainer">
+              <input type="range" min="1" max="100" value="0" class="slider" id="min-vault-progress">
+            </div>
+            <div class="slidevalue-vault">
+              0
+            </div>
+          </div>
+          <div class="settings-row">
+            <button id="resetGameHistory" class="btn btnbtn btn-negative">Clear Game History Events</button>
+          </div>
+          <hr />
+
+          <div class="settings-row">
+            <input rv-checked="mouseEvents" class="tf-toggle" type="checkbox" key="mouseEvents" data-toggle="toggle"> Hide tracker on all right clicks
+          </div>
+          <div class="settings-row">
+            <input rv-checked="leftMouseEvents" class="tf-toggle" type="checkbox" key="leftMouseEvents" data-toggle="toggle"> Un-hide tracker on all left clicks
+          </div>
+
+          <div class="settings-row">
+            <p>"Hide" delay (how many seconds should the tracker stay hidden on right clicks or hide button presses?)</p>
+            <div class="slidecontainer">
+              <input type="range" min="1" max="100" value="50" class="slider" id="hide-delay">
+            </div>
+            <div class="slidevalue">
+              40
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="invertHideMode" class="tf-toggle" type="checkbox" key="invertHideMode" data-toggle="toggle"> Invert Hide Mode (<i>always</i> hide the tracker, only show it on right clicks)
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="rollupMode" class="tf-toggle" type="checkbox" key="rollupMode" data-toggle="toggle"> Roll Up Mode (Minimize the tracker instead of hiding it)
+          </div>
+
+          <hr />
+
+          <div class="settings-row">
+            Use the following sorting method on deck lists <a class="link" onclick='$("#sorting-help").slideToggle()'><span class="icon icon-help-circled link"></span></a>
+          </div>
+          <div class="settings-row">
+            <select id="sorting-method-select" class="form-control">
+              <option rv-each-sortingmethod="sortingMethods" rv-value="sortingmethod.id">{ sortingmethod.text }</option>
+            </select>
+          </div>
+
+          <div class="settings-row well" id="sorting-help" style="display: none;">
+            <h5>What do these sorting methods mean?</h5>
+            <p class="about-p" rv-each-sortingmethod="sortingMethods"><b>{ sortingmethod.text }</b>: { sortingmethod.help }</p>
+          </div>
+
+        </div>
+      </div>
+      <div id="wlc-pane" value="wlc" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <h3>All-time Win/Loss Counters</h3>
+            <p>
+              All-time counters keep a running tally of all your wins and losses across all play sessions.<br/>
+              These counters will be stored on exit and restored on launch.<br/>
+              The total counter is a count of all your wins and losses.
+            </p>
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="showTotalWinLossCounter" class="tf-toggle" type="checkbox" key="showTotalWinLossCounter" data-toggle="toggle"><span class="counter-toggle-span">Show all-time total win/loss counter</span>
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="showDeckWinLossCounter" class="tf-toggle" type="checkbox" key="showDeckWinLossCounter" data-toggle="toggle"><span class="counter-toggle-span">Show all-time per-deck win/loss counter</span>
+          </div>
+
+          <div class="settings-row reset-all">
+            <button id="all-reset-button" class="btn btn-danger reset-button reset-all-btn" data-deckid="all">Reset Every All-time Counter</button>
+          </div>
+
+          <div class="settings-row reset-all">
+            <button id="all-decks-reset-button" class="btn btn-danger reset-button reset-all-btn" data-deckid="all-decks">Reset Every All-time Deck Counter</button>
+          </div>
+
+          <div class="settings-row counter-reset-row">
+            <span class="counter-reset-span">Total &ndash; {totalWinLossCounter.win} : {totalWinLossCounter.loss}</span>
+            <span class="counter-adj-span">
+              <button id="total-win-plus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="win" data-direction="up">+ Win</button>
+              <button id="total-win-minus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="win" data-direction="down">- Win</button>
+              <button id="total-loss-plus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="loss" data-direction="up">+ Loss</button>
+              <button id="total-loss-plus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="loss" data-direction="down">- Loss</button>
+              <button id="total-reset-button" class="btn btn-danger reset-button" data-deckid="total">Reset</button>
+            </span>
+          </div>
+          <div class="settings-row counter-reset-row" rv-each-deck="counterDeckList">
+            <span class="counter-reset-span">{deck.name} &ndash; {deck.win} : {deck.loss}</span>
+            <span class="counter-adj-span">
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="win" data-direction="up">+ Win</button>
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="win" data-direction="down">- Win</button>
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="loss" data-direction="up">+ Loss</button>
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="loss" data-direction="down">- Loss</button>
+              <button rv-deckid="deck.id" class="btn btn-danger reset-button">Reset</button>
+            </span>
+          </div>
+
+          <hr/>
+
+          <div class="settings-row">
+            <h3>Session Win/Loss Counters</h3>
+            <p>
+              Session counters keep a running tally of your wins and losses in the current play session.<br/>
+              These counters will be reset automatically on the next launch.
+            </p>
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="showDailyTotalWinLossCounter" class="tf-toggle" type="checkbox" key="showDailyTotalWinLossCounter" data-toggle="toggle"><span class="counter-toggle-span">Show session total win/loss counter</span>
+          </div>
+
+          <div class="settings-row">
+            <input rv-checked="showDailyDeckWinLossCounter" class="tf-toggle" type="checkbox" key="showDailyDeckWinLossCounter" data-toggle="toggle"><span class="counter-toggle-span">Show session per-deck win/loss counter</span>
+          </div>
+
+          <div class="settings-row reset-all">
+            <button id="daily-all-reset-button" class="btn btn-danger reset-button reset-all-btn" data-deckid="all" data-daily="true">Reset Every Session Counter</button>
+          </div>
+
+          <div class="settings-row reset-all">
+            <button id="all-daily-decks-reset-button" class="btn btn-danger reset-button reset-all-btn" data-deckid="all-decks" data-daily="true">Reset Every Session Deck Counter</button>
+          </div>
+
+          <div class="settings-row counter-reset-row">
+            <span class="counter-reset-span">Total &ndash; {dailyTotalWinLossCounter.win} : {dailyTotalWinLossCounter.loss}</span>
+            <span class="counter-adj-span">
+              <button id="total-win-plus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="win" data-direction="up" data-daily="true">+ Win</button>
+              <button id="total-win-minus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="win" data-direction="down" data-daily="true">- Win</button>
+              <button id="total-loss-plus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="loss" data-direction="up" data-daily="true">+ Loss</button>
+              <button id="total-loss-plus-button" class="btn btn-primary counter-adj-button" data-deckid="total" data-winloss="loss" data-direction="down" data-daily="true">- Loss</button>
+              <button id="daily-total-reset-button" class="btn btn-danger reset-button" data-deckid="total" data-daily="true">Reset</button>
+            </span>
+          </div>
+          <div class="settings-row counter-reset-row" rv-each-deck="dailyCounterDeckList">
+            <span class="counter-reset-span">{deck.name} &ndash; {deck.win} : {deck.loss}</span>
+            <span class="counter-adj-span">
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="win" data-direction="up" data-daily="true">+ Win</button>
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="win" data-direction="down" data-daily="true">- Win</button>
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="loss" data-direction="up" data-daily="true">+ Loss</button>
+              <button class="btn btn-primary counter-adj-button" rv-deckid="deck.id" data-winloss="loss" data-direction="down" data-daily="true">- Loss</button>
+              <button rv-deckid="deck.id" class="btn btn-danger reset-button" data-daily="true">Reset</button>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div id="theme-pane" value="theme" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <div class="checkbox">
+              <label>
+                <input rv-checked="useTheme" id="apply-custom-theme-toggle" type="checkbox" data-toggle="toggle"> Apply the following custom theme:
+              </label>
+            </div>
+          </div>
+          <div class="settings-row">
+            <select id="custom-theme-select" class="form-control">
+              <option rv-each-theme="customStyleFiles">{ theme }</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="checkbox">
+              <label>
+                <input rv-checked="useFlat" id="enable-flat-theme-toggle" type="checkbox" data-toggle="toggle"> Enable flat theme
+              </label>
+            </div>
+          </div>
+          <div class="settings-row" rv-show="useFlat">
+            <div class="checkbox">
+              <label>
+                <input rv-checked="useMinimal" id="enable-minimal-theme-toggle" type="checkbox" data-toggle="toggle"> Enable minimal theme
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="privacy-pane" value="privacy" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <input rv-checked="incognito" class="tf-toggle" type="checkbox" key="incognito" data-toggle="toggle"> Incognito Mode
+            <br />
+            <br />
+            <p class="about-p disclaimer"><b>Warning:</b> with incognito mode enabled, MTGATracker will not send any game data to MTGATracker services, including inspector. This means that inspector will no longer work!</p>
+          </div>
+        </div>
+      </div>
+      <div id="account-pane" value="account" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <h3>Inspector Account</h3>
+            <p>On first launch, MTGATracker generates a key that is private and unique to your machine.
+              Treat it like a password!</p>
+            <p>To authorize your Inspector account to view records from your tracker / machine, make sure you're signed
+              in to inspector in your default browser, then click the link below.</p>
+            <p><b><a rv-authref="trackerID">Authorize Inspector</a></b></p>
+            <p><b>View Tracker key</b>: <span id="showTrackerID">(click to reveal)</span></p>
+          </div>
+        </div>
+      </div>
+      <div id="collection-pane" value="collection" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <h3>Collection</h3>
+            <p><b>Basic info</b>: { lastCollection | countcollection }</p>
+            <button id="exportCollectionMTGGButton" class="btn btnbtn btn-secondary">Export collection (MTGGoldfish .csv format)</button>
+            <br>
+            <p>(File will be saved as <code>Desktop/mtga_collection_mtggoldfish.csv</code> )</p>
+          </div>
+          <div class="settings-row">
+            <h3>Recently collected cards</h3>
+            <p>How many new card events to display</p>
+            <div class="slidecontainer">
+              <input type="range" min="1" max="100" value="0" class="slider" id="recent-cards-quantity-slider">
+            </div>
+            <div class="slidevalue-recent-cards">
+              0
+            </div>
+            <div class="recent-cards-group-container" rv-each-recentcardgroup="recentCards | filterBySlideValueRecentCards recentCardsQuantityToShow">
+              <h5 class="recent-cards-header" onclick="recentCardsSectionClickHandler(event)">Cards updated: {recentcardgroup.time}</h5>
+              <ul class="recent-cards-container" rv-recentcardsbinder="recentcardgroup.cardsObtained">
+                <!-- cards appended here from settingsRenderer -->
+              </ul>
+            </div>
+            <div id="no-recently-obtained-cards">The tracker hasn't tracked any recently obtained cards (obtain cards to update this).</div>
+          </div>
+        </div>
+      </div>
+      <div id="supporters-pane" value="supporters" rv-showsettingspane="settingsPaneIndex">
+        <div class="settings-container">
+          <div class="settings-row">
+            <h3>Thank you for your support!</h3>
+            <p>MTGATracker is an open-source project, built as a labor of love, with code contributions from developers
+              all over the world. MTGATracker and Inspector are presented ad-free for your enjoyment.</p>
+            <p>The bills associated with MTGATracker are paid for out-of-pocket by
+              MTGATracker's lead dev, but our supporters on Patreon help lighten the load (and keep us motivated to keep
+              working on MTGATracker).</p>
+            <p><b>We can't thank you enough!</b></p>
+            <h2>Our Scout-Major Level Supporters</h2>
+            <div class="maj-container well">
+              <center>
+                <img class="maj-img" src="img/minionod.png" />
+                <hr class="small-hr" />
+                <div>MinionOd</div>
+                <a href="https://twitch.tv/minionod"> <i class="fa fa-twitch social-icon"></i></a>
+                <a href="https://twitter.com/minionod"> <i class="fa fa-twitter social-icon"></i></a>
+              </center>
+            </div>
+
+            <div class="maj-container well">
+              <center>
+                <img class="maj-img" src="img/spencatro.jpg" />
+                <hr class="small-hr" />
+                <div>Spencatro</div>
+                <a href="https://twitch.tv/spencatro"> <i class="fa fa-twitch social-icon"></i></a>
+                <a href="https://twitter.com/spencatro"> <i class="fa fa-twitter social-icon"></i></a>
+                <a href="https://github.com/shawkinsl"> <i class="fa fa-github social-icon"></i></a>
+              </center>
+            </div>
+            <h2>Our Scout-Captain Level Supporters</h2>
+            <ul>
+              <li>emerald000</li>
+              <li>MTGMAD <a href="https://twitter.com/mtgmad"><i class="fa fa-twitter social-icon"></i></a></li>
+              <li>isharacomix <a href="http://isharacomix.org"><i class="fa fa-link social-icon"></i></a></li>
+              <li>CommiePuddin <a href="https://www.twitch.tv/commiepuddin"><i class="fa fa-twitch social-icon"></i></a></li>
+              <li>Xanatos</li>
+              <li>Chriss</li>
+            </ul>
+            <p>Support us <a href="https://www.patreon.com/mtgatracker">on Patreon</a> to get your name on the list!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+
+<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+<script type="text/javascript" src="rivets.bundled.min.js"></script>
+<script type="text/javascript" src="settingsRenderer.js"></script>
+<script>
+  let $ = require("./jquery.js")
+  let jQuery = $
+  // let renderer = require('./renderer.js')
+</script>
+<script>if (window.module) module = window.module;</script>
+<script src="vendor/toggle/bootstrap-toggle.min.js"></script>
+<link href="vendor/bootstrap-pin-input/bootstrap-pincode-input.css" rel="stylesheet">
+<script src="vendor/bootstrap-pin-input/bootstrap-pincode-input.js"></script>
+</html>

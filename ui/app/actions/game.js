@@ -26,9 +26,9 @@ export function updateGameState(gameStateData) {
       }, {}
     )
     if(getState().game.gameID !== gameStateData.game_id) {
-      dispatch(newGame(gameStateData.game_id, gameStateData.draw_odds.deck_name, newDeck))
+      dispatch(newGame(gameStateData.game_id, gameStateData.deck_id, gameStateData.draw_odds.deck_name, newDeck))
       dispatch(push('/game'))
-      dispatch(runTimers())
+      dispatch(runTimers(true))
     } else {
       dispatch(updateGameDeck(newDeck))
     }
@@ -41,18 +41,18 @@ export function endGame(gameStateData) {
   }
 }
 
-export function runTimers() {
+export function runTimers(forced) {
   return (dispatch, getState) => {
-    if(getState().game.timers.active) {
+    if(forced || getState().game.timers.active) {
+      setTimeout(() => dispatch(runTimers()), 250)
       dispatch(tickTimer())
-      setTimeout(runTimers, 250)
     } else {
       return
     }
   }
 }
 
-export const newGame = (gameID, deckName, gameDeck) => ({type: START_GAME, gameID, name: deckName, gameDeck})
+export const newGame = (gameID, deckID, deckName, gameDeck) => ({type: START_GAME, gameID, deckID, name: deckName, gameDeck})
 export const updateGameDeck = (gameDeck) => ({type: UPDATE_GAME_DECK, gameDeck})
 export const tickTimer = () => ({type: TICK_TIMER})
 export const switchTimers = (playerPriority) => ({type: SWITCH_TIMER, priority: playerPriority})
