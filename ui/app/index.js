@@ -6,7 +6,7 @@ import Root from './containers/Root';
 import { configureStore, history } from './store/configureStore';
 import './app.global.css';
 import ReconnectingWebSocket from 'reconnectingwebsocket'
-import {updateDecks} from './actions'
+import {updateDecks, gameActivity, updateGameState, endGame, switchTimers} from './actions'
 
 const store = configureStore();
 let port = 5678;
@@ -14,13 +14,31 @@ const ws = new ReconnectingWebSocket(`ws://127.0.0.1:${port}/`, null, {construct
 
 let onMessage = (data) => {
   data = JSON.parse(event.data)
-  console.log(data)
   switch(data.data_type) {
     case "decklist_change":
       store.dispatch(updateDecks(data.decks))
       return
     case "game_state":
       console.log(data)
+      if(!data.match_complete) {
+        //dispatch a game update event
+        //this is a thunk
+        //it first checks if this is related to a currently running game
+        //if not, it initiates a new game (and terminates the old one)
+        //then it handles library and timer updates
+        store.dispatch(updateGameState(data))
+      } else {
+        //finish game
+        //again this is a thunk
+        //first it handles terminating the current game
+        //and then the process of trying to upload it
+        store.dispatch(endGame())
+      }
+      return
+    case "message":
+      if(data.decisionPlayerChange) {
+        store.dispatch(switchTimers(data.heroIsDeciding))
+      }
       return
     default:
       return

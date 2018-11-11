@@ -4,6 +4,7 @@ import { connectRouter } from 'connected-react-router';
 import counter from './counter';
 import card from './card';
 import deck from './deck';
+import game from './game';
 import settings from './setting';
 
 export default function createRootReducer(history: {}) {
@@ -14,6 +15,7 @@ export default function createRootReducer(history: {}) {
       counter,
       cards: card,
       decks: deck,
+      game,
       settings })
   );
 }

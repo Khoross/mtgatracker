@@ -4,14 +4,14 @@ import routes from './constants/routes';
 import App from './containers/App';
 import CardList from './containers/DeckPageCardList';
 import DeckList from './containers/DeckPageDeckList';
+import GameDeck from './containers/GamePageCardList';
 
 export default () => (
   <App>
-    <Switch>
-      <div id="tracker-body">
-        <Route path={routes.DECK} render={({match}) => <CardList deck={match.params.id} />} />
-        <Route exact path={routes.HOME} component={DeckList} />
-      </div>
-    </Switch>
+    <div id="tracker-body">
+      <Route path={routes.DECK} render={({match}) => <CardList deck={match.params.id} />} />
+      <Route exact path={routes.HOME} component={DeckList} />
+      <Route path={routes.GAME} component={GameDeck} />
+    </div>
   </App>
 );
