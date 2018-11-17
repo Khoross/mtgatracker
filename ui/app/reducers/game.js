@@ -103,7 +103,5 @@ const timersReducer = (state = {active: false}, action) => {
 export default combineReducers({
     gameID: idReducer,
     deckID: deckIDReducer,
-    name: nameReducer,
-    cards: cardsReducer,
     timers: timersReducer
 })

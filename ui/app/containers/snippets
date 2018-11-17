@@ -1,0 +1,172 @@
+
+import { ErrorCount } from './ErrorCount.js'
+import { Message } from './Message.js'
+import { CardsRemaining, MessageList } from './MessageList.js'
+import { ReturnLink } from './ReturnLink.js'
+
+const WinLossEntry = (props) => {
+  return(
+    <div className="win-loss-div">
+      <span className="win-loss-label">{props.label}</span>
+      <span className="win-loss-counter">`W: ${props.wins} - L: ${props.loss}`</span>
+    </div>
+  )
+}
+
+const HeaderButtons = (props) => {
+  return(
+    <React.Fragment>
+      <h3 className="zoom-panel"><span className="zoom-out zoom glow-on-hover">-</span> / <span className="zoom-in zoom glow-on-hover">+</span></h3>
+      <div id="floating-eye" className="no-height-contribution glow-on-hover">
+        <img className="settings-img" src="hide-512.png" width="30px" height="30px" />
+      </div>
+      <div id="floating-history" className="no-height-contribution glow-on-hover">
+        <img className="settings-img" src="img/history.png" width="25px" height="25px" />
+      </div>
+      <div id="floating-settings" className="no-height-contribution glow-on-hover">
+        <img className="settings-img" src="gear-white.png" width="25px" height="25px" />
+      </div>
+    </React.Fragment>
+  )
+}
+
+const VaultProgress = (props) => {
+  return(
+    <h3 className="beleren">`Vault Progress: ${props.progress}%`</h3>
+  )
+}
+
+
+
+
+
+
+
+
+
+
+
+const DeckListPage = () => {
+  return (
+    <div id="container">
+      <div id="tracker-header">
+        <h1 className="beleren header-title">MTGA Tracker</h1>
+        <HeaderButtons />
+      </div>
+      <div id="tracker-body">
+        {<!-- START Game View -->}
+        <div id="game-deck-list">
+          {<!-- checks to settings for which of these are visible -->}
+          <div className="win-loss-group">
+            <WinLossEntry label="Total" wins={totalWinCounter} losses={totalLossCounter}/>
+            <WinLossEntry label="Session Total" wins={dailyTotalWinCounter} losses={dailyTotalLossCounter}/>
+          </div>
+          {<!-- check with settings for inclusion -->}
+          <div id="decklists-container">
+            <VaultProgress progress={lastVaultProgress}/>
+            <h3 class="reminder">Pick a deck, or start a game!</h3>
+            {<!-- always visible; messages not necessarily all visible and check is in mapStateToProps -->}
+            <MessageList messageIDs={messages}/>
+            {<!-- internally checks if there are entries; if not, renders warning <p> tag -->}
+            <DeckList />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const DeckDetailsPage = () => {
+  return (
+    <div id="container">
+      <div id="tracker-header">
+        <h1 className="beleren header-title">MTGA Tracker</h1>
+        <HeaderButtons />
+      </div>
+      <div id="tracker-body">
+        {<!-- START Game View -->}
+        <div id="game-deck-list">
+          {<!-- checks to settings for which of these are visible -->}
+          <div class="win-loss-group">
+            <WinLossEntry label="Total" wins={totalWinCounter} losses={totalLossCounter}/>
+            <WinLossEntry label="Session Total" wins={dailyTotalWinCounter} losses={dailyTotalLossCounter}/>
+          </div>
+          <div class="win-loss-group">
+            <WinLossEntry label="Deck" wins={deckWinCounter} losses={deckLossCounter}/>
+            <WinLossEntry label="Session Deck" wins={dailyDeckWinCounter} losses={dailyDeckLossCounter}/>
+          </div>
+          {<!-- check with settings for inclusion -->}
+          <VaultProgress progress={lastVaultProgress}/>
+          {<!-- always visible; messages not necessarily all visible and check is in mapStateToProps -->}
+          <MessageList messageIDs={messages}/>
+          {<!-- this is a slightly different arrangement to base -->
+                    <!-- original has return link and title inside the deck list -->
+                    <!-- Consider altering title display to spport re-use -->}
+          <ReturnLink />
+          <h1 class="deck-title"> <i class="fas fa-chevron-left"></i>{deck_name}</h1>
+          <CardList deck={match.id} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+const GamePage = () => {
+  return(
+    <div id="container">
+      <div id="tracker-header">
+        <h1 class="game-deck-title">{ deck_name }</h1>
+        <HeaderButtons />
+      </div>
+      <div id="tracker-body">
+        {<!-- START Game View -->}
+        <div id="game-deck-list">
+          {<!-- checks to settings for which of these are visible -->}
+          <div class="win-loss-group">
+            <WinLossEntry label="Total" wins={totalWinCounter} losses={totalLossCounter}/>
+            <WinLossEntry label="Session Total" wins={dailyTotalWinCounter} losses={dailyTotalLossCounter}/>
+          </div>
+          <div class="win-loss-group">
+            <WinLossEntry label="Deck" wins={deckWinCounter} losses={deckLossCounter}/>
+            <WinLossEntry label="Session Deck" wins={dailyDeckWinCounter} losses={dailyDeckLossCounter}/>
+          </div>
+          {<!-- check with settings for inclusion -->}
+          <VaultProgress progress={lastVaultProgress}/>
+          {<!-- check with settings for inclusion -->}
+          <ErrorCount errorCount={error_count} />
+          {<!-- always visible; messages not necessarily all visible and check is in mapStateToProps -->}
+          <MessageList messageIDs={messages}/>
+          {<!-- check with game to see if visible - only while game not running -->}
+          <ReturnLink />
+          <CardsRemaining />
+          <CardList deck="game" />
+          {<!-- check with settings if this is visible at all; internally checks for other two components -->}
+          <ChessTimers />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const DraftPage = () => {
+  return(
+    <div id="container">
+      <div id="tracker-header">
+        <h1 className="game-deck-title gamecomplete">Draft Picks</h1>
+        <ReturnLink />
+        <HeaderButtons />
+      </div>
+      <div id="tracker-body">
+        {<!-- START Game View -->}
+        <div id="draft-collection-list">
+          {<!-- check with settings for inclusion -->}
+          <ErrorCount errorCount={error_count} />
+          {<!-- always visible; messages not necessarily all visible and check is in mapStateToProps -->}
+          <MessageList messageIDs={messages}/>
+          <DraftList />
+        </div>
+      </div>
+    </div>
+  )
+}

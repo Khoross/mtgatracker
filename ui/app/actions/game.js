@@ -1,4 +1,7 @@
+// @flow 
+
 import { push } from 'connected-react-router'
+import { updateDecks, updateDeck } from './deck.js'
 
 export const START_GAME : 'START_GAME' = 'START_GAME';
 export const UPDATE_GAME_DECK : 'UPDATE_GAME_DECK' = 'UPDATE_GAME_DECK';
@@ -18,19 +21,20 @@ export function updateGameState(gameStateData) {
     const newDeck = gameStateData.draw_odds.library_contents.reduce(
       (acc, cur) => {
         if(cur.mtga_id in acc) {
-          acc[cur.mtga_id].count += 1
+          acc[cur.mtga_id].count_in_deck += 1
         } else {
-          acc[cur.mtga_id] = {count: 1}
+          acc[cur.mtga_id] = {count_in_deck: 1, mtga_id: cur.mtga_id}
         }
         return acc
       }, {}
     )
     if(getState().game.gameID !== gameStateData.game_id) {
-      dispatch(newGame(gameStateData.game_id, gameStateData.deck_id, gameStateData.draw_odds.deck_name, newDeck))
+      dispatch(newGame(gameStateData.game_id, gameStateData.deck_id))
+      dispatch(updateDecks({'game': {deck_id: 'game', pool_name: gameStateData.draw_odds.deck_name, cards: newDeck}}))
       dispatch(push('/game'))
       dispatch(runTimers(true))
     } else {
-      dispatch(updateGameDeck(newDeck))
+      dispatch(updateDeck({deck_id: 'game', pool_name: gameStateData.draw_odds.deck_name, cards: newDeck}))
     }
   }
 }
@@ -44,7 +48,7 @@ export function endGame(gameStateData) {
 export function runTimers(forced) {
   return (dispatch, getState) => {
     if(forced || getState().game.timers.active) {
-      setTimeout(() => dispatch(runTimers()), 250)
+      setTimeout(() => dispatch(runTimers()), 1000)
       dispatch(tickTimer())
     } else {
       return
@@ -52,7 +56,7 @@ export function runTimers(forced) {
   }
 }
 
-export const newGame = (gameID, deckID, deckName, gameDeck) => ({type: START_GAME, gameID, deckID, name: deckName, gameDeck})
+export const newGame = (gameID, deckID) => ({type: START_GAME, gameID, deckID, name: deckName, gameDeck})
 export const updateGameDeck = (gameDeck) => ({type: UPDATE_GAME_DECK, gameDeck})
 export const tickTimer = () => ({type: TICK_TIMER})
 export const switchTimers = (playerPriority) => ({type: SWITCH_TIMER, priority: playerPriority})

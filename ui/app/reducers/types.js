@@ -1,3 +1,5 @@
+// @flow 
+
 import type { Dispatch as ReduxDispatch, Store as ReduxStore } from 'redux';
 import {ADD_CARD, ADD_CARD_BATCH, UPDATE_DECK, UPDATE_SETTINGS, HYDRATE_SETTINGS} from '../actions'
 
