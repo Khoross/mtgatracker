@@ -1,17 +1,9 @@
 // @flow 
 
-export const WinLossEntry = connect(
-  (store, props) => (
-    store.settings.winLossCounter && store.settings.winLossCounter[props.type] && store.settings.winLossCounter[props.type][props.deck] ?
-  {
-    wins: store.settings.winLossCounter[props.type][props.deck].win,
-    losses: store.settings.winLossCounter[props.type][props.deck].loss
-  } :
-  {
-    wins: 0,
-    losses: 0
-  })
-)((props) => {
+import React from 'react'
+import { connect } from 'react-redux'
+
+const WinLossEntry = (props) => {
   return(
     <div className="win-loss-div" >
       <span className="win-loss-label">
@@ -22,4 +14,19 @@ export const WinLossEntry = connect(
       </span>
     </div>
   )
-})
+}
+
+const mapStateToProps = (state, props) => (
+    state.stats && state.stats[props.type] && state.stats[props.type][props.deck] ?
+  {
+    wins: state.stats[props.type][props.deck].win,
+    losses: state.stats[props.type][props.deck].loss
+  } :
+  {
+    wins: 0,
+    losses: 0
+  })
+
+export default connect(
+  mapStateToProps
+)(React.memo(WinLossEntry))

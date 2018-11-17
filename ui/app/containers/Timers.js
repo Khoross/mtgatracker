@@ -2,10 +2,10 @@
 import React from 'react';
 import { connect } from 'react-redux';
 
-export const SubTimer = connect(
-  (store, props)=>({
-    time: Math.round(store.game.timers[props.timer]/1000),
-    className: store.game.timers.priority === props.priority ? 'chess-timer active' : 'chess-timer'
+const SubTimer = connect(
+  (state, props)=>({
+    time: Math.round(state.game.timers[props.timer]/1000),
+    className: state.game.timers.priority === props.priority ? 'chess-timer active' : 'chess-timer'
   })
 )(
   (props) => 
@@ -18,7 +18,7 @@ export const SubTimer = connect(
     </h3>
 )
 
-const TotalTimer = connect((store)=>({time: Math.round(store.game.timers.total/1000)}))((props) => 
+const TotalTimer = connect((state)=>({time: Math.round(state.game.timers.total/1000)}))((props) => 
   <h2 id="overall-timer">
     {
       props.time > 3600 ? 
@@ -28,7 +28,7 @@ const TotalTimer = connect((store)=>({time: Math.round(store.game.timers.total/1
   </h2>
 )
 
-export const Timers = () => {
+const Timers = () => {
   return (
     <React.Fragment>
       <TotalTimer />
@@ -37,3 +37,5 @@ export const Timers = () => {
     </React.Fragment>
   )
 }
+
+export default Timers

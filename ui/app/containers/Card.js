@@ -1,6 +1,7 @@
+// @flow 
+
 import { connect } from 'react-redux';
 import Card from '../components/Card';
-import { push } from 'connected-react-router'
 
 function mapStateToProps(state, props) {
   return {

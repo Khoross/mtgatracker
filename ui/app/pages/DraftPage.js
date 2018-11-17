@@ -1,23 +1,41 @@
 // @flow 
 
-export const DraftPage = () => {
+import React from 'react'
+import { connect } from 'react-redux';
+import Check from '../components/CheckComponent.js';
+import ReturnLink from '../containers/ReturnLink.js'
+import ErrorCount from '../containers/ErrorCount.js'
+import MessageList from '../containers/MessageList.js'
+import CardList from '../containers/CardList.js'
+//import HeaderButtons from '../components/HeaderButtons.js'
+
+const DraftPage = (props) => {
   return(
-    <div id="container">
+    <>
       <div id="tracker-header">
         <h1 className="game-deck-title gamecomplete">Draft Picks</h1>
+        {/*<HeaderButtons />*/}
         <ReturnLink />
-        <HeaderButtons />
       </div>
       <div id="tracker-body">
-        {<!-- START Game View -->}
         <div id="draft-collection-list">
-          {<!-- check with settings for inclusion -->}
-          <ErrorCount errorCount={error_count} />
-          {<!-- always visible; messages not necessarily all visible and check is in mapStateToProps -->}
-          <MessageList messageIDs={messages}/>
-          <DraftList />
+          <Check active={props.showErrors}>
+            <ErrorCount />
+          </Check>
+          <MessageList/>
+          <CardList deck="draft" extraText="Owned" hideCost={true}/>
         </div>
       </div>
-    </div>
+    </>
   )
 }
+
+function mapStateToProps(state, props) {
+  return {
+    showErrors: state.settings.showErrors
+  };
+}
+
+export default connect(
+  mapStateToProps
+)(DraftPage);

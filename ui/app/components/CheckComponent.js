@@ -2,6 +2,8 @@
 
 import React from 'react';
 
-export default CheckComponent = (props) => {
+const Check = (props) => {
   return props.active ? <React.Fragment>{props.children}</React.Fragment> : null
 }
+
+export default Check

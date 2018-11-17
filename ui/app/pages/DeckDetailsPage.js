@@ -1,36 +1,76 @@
 // @flow 
 
-export const DeckDetailsPage = () => {
+import React from 'react'
+import { connect } from 'react-redux';
+import Check from '../components/CheckComponent.js';
+import WinLossEntry from '../containers/WinLossEntry.js'
+import VaultProgress from '../containers/VaultProgess.js'
+import ReturnLink from '../containers/ReturnLink.js'
+import MessageList from '../containers/MessageList.js'
+import CardList from '../containers/CardList.js'
+//import HeaderButtons from '../components/HeaderButtons.js'
+
+const DeckDetailsPage = (props) => {
   return (
-    <div id="container">
+    <>
       <div id="tracker-header">
         <h1 className="beleren header-title">MTGA Tracker</h1>
-        <HeaderButtons />
+        {/*<HeaderButtons />*/}
       </div>
       <div id="tracker-body">
-        {<!-- START Game View -->}
         <div id="game-deck-list">
-          {<!-- checks to settings for which of these are visible -->}
-          <div class="win-loss-group">
-            <WinLossEntry label="Total" wins={totalWinCounter} losses={totalLossCounter}/>
-            <WinLossEntry label="Session Total" wins={dailyTotalWinCounter} losses={dailyTotalLossCounter}/>
-          </div>
-          <div class="win-loss-group">
-            <WinLossEntry label="Deck" wins={deckWinCounter} losses={deckLossCounter}/>
-            <WinLossEntry label="Session Deck" wins={dailyDeckWinCounter} losses={dailyDeckLossCounter}/>
-          </div>
-          {<!-- check with settings for inclusion -->}
-          <VaultProgress progress={lastVaultProgress}/>
-          {<!-- always visible; messages not necessarily all visible and check is in mapStateToProps -->}
-          <MessageList messageIDs={messages}/>
-          {<!-- this is a slightly different arrangement to base -->
-                    <!-- original has return link and title inside the deck list -->
-                    <!-- Consider altering title display to spport re-use -->}
+          <Check active={props.showTotalCounters}>
+            <div className="win-loss-group">
+              <Check active={props.showTotalTotal}>
+                <WinLossEntry label="Total" type="alltime" deck="total"/>
+              </Check>
+              <Check active={props.showTotalSession}>
+                <WinLossEntry label="Session Total" type="session" deck="total"/>
+              </Check>
+            </div>
+          </Check>
+          <Check active={props.showDeckCounters}>
+            <div className="win-loss-group">
+              <Check active={props.showDeckTotal}>
+                <WinLossEntry label="Deck" type="alltime" deck={props.deckID}/>
+              </Check>
+              <Check active={props.showDeckSession}>
+                <WinLossEntry label="Session Deck" type="session" deck={props.deckID}/>
+              </Check>
+            </div>
+          </Check>
+          <Check active={props.showVault}>
+            <VaultProgress />
+          </Check>
+          <MessageList />
           <ReturnLink />
-          <h1 class="deck-title"> <i class="fas fa-chevron-left"></i>{deck_name}</h1>
-          <CardList deck={match.id} />
+          <h1 className="deck-title"> <i className="fas fa-chevron-left"></i>{props.deck_name}</h1>
+          <CardList deck={props.deckID} />
         </div>
       </div>
-    </div>
+    </>
   )
 }
+
+function mapStateToProps(state, props) {
+  const id = props.match.params.id
+  return {
+    deck_name: state.decks[id].pool_name,
+    deckID: id,
+    showTotalCounters: state.settings.showWinLossCounter &&
+      (state.settings.showTotalWinLossCounter ||
+        state.settings.showDailyTotalWinLossCounter),
+    showTotalTotal: state.settings.showTotalWinLossCounter,
+    showTotalSession: state.settings.showDailyTotalWinLossCounter,
+    showDeckCounters: state.settings.showWinLossCounter &&
+      (state.settings.showDeckWinLossCounter ||
+        state.settings.showDailyDeckWinLossCounter),
+    showDeckTotal: state.settings.showDeckWinLossCounter,
+    showDeckSession: state.settings.showDailyDeckWinLossCounter,
+    showVault: state.settings.showVaultProgress
+  };
+}
+
+export default connect(
+  mapStateToProps
+)(DeckDetailsPage);

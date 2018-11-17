@@ -1,5 +1,6 @@
 {
   "HOME": "/",
   "DECK": "/deck/:id",
-  "GAME": "/game"
+  "GAME": "/game",
+  "DRAFT": "/draft"
 }

@@ -1,6 +1,10 @@
 // @flow 
 
-export const Message = (props) => {
+import React from 'react'
+import { connect } from 'react-redux'
+import { dismissMessage } from '../actions'
+
+const Message = (props) => {
   return (
     <p className="message-container">
       {
@@ -19,3 +23,16 @@ export const Message = (props) => {
     </p>
   )
 }
+
+const mapStateToProps = (state, props) => ({
+  count: state.messages[props.id].count,
+  important: state.messages[props.id].important,
+  link: state.messages[props.id].link,
+  text: state.messages[props.id].text
+})
+
+const mapDispatchToProps = (dispatch, props) => ({
+  dismiss: dispatch(dismissMessage(props.id))
+})
+
+export default connect(mapStateToProps, mapDispatchToProps)(React.memo(Message))

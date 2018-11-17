@@ -619,7 +619,33 @@ global.recentCards = recentCards
 global.recentCardsQuantityToShow = recentCardsQuantityToShow
 global.logPath = logPath
 global.historyZoom = settings.get("history-zoom", 1.0)
-global.settings = settings.getAll()
+const showTotalWinLossCounter = settings.get('showTotalWinLossCounter')
+const showDeckWinLossCounter = settings.get('showDeckWinLossCounter')
+const showDailyTotalWinLossCounter = settings.get('showDailyTotalWinLossCounter')
+const showDailyDeckWinLossCounter = settings.get('showDailyDeckWinLossCounter')
+global.settings = {
+  showErrors,
+  incognito,
+  useFrame,
+  useTheme,
+  themeFile,
+  showGameTimer,
+  showChessTimers,
+  lastVaultProgress,
+  showVaultProgress,
+  minVaultProgress,
+  showWinLossCounter,
+  showTotalWinLossCounter,
+  showDeckWinLossCounter,
+  showDailyTotalWinLossCounter,
+  showDailyDeckWinLossCounter,
+  sortMethod,
+  useFlat,
+  useMinimal,
+  zoom,
+  incognito,
+  API_URL
+}
 
 /*************************************************************
  * window management

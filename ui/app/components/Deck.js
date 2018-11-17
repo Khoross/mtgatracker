@@ -1,13 +1,13 @@
-import React, { Component } from 'react';
+// @flow 
 
-class Deck extends Component {
-  render() {
-    return (
-      <div className="deck-container link" onClick={()=>this.props.navigate()}>
-        <h3 className="beleren link deck-name">{this.props.deck_name}</h3>
-      </div>
-    );
-  }
+import React from 'react';
+
+const Deck = (props) => {
+  return (
+    <div className="deck-container link" onClick={props.navigate}>
+      <h3 className="beleren link deck-name">{props.deck_name}</h3>
+    </div>
+  );
 }
 
-export default Deck
+export default React.memo(Deck)
