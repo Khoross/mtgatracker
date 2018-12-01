@@ -14,6 +14,26 @@ const { Menu, MenuItem } = remote
 let browserWindow = remote.getCurrentWindow()
 const activeWin = require("active-win")
 
+var { rendererPreload } = require('electron-routes');
+rendererPreload();
+
+let addClickHandler = (selector,handler) => {
+  let new_handler = (e) => {
+    if (!$.contains($('.menu-div').get(0),event.target) && !$('#main-menu').hasClass('hide-me')){
+      e.preventDefault()
+      e.stopPropagation()
+      toggleMenu()
+    } else {
+      if ( handler != null){
+        handler(e)
+      }
+    }
+  }
+  $(selector).each( (i,elem) => {
+    $(elem).off().on('click',new_handler)
+  })
+}
+
 // poll for active window semi-regularly; if it's not MTGA or MTGATracker, minimize / unset alwaysontop
 setInterval(() => {
   if (appData.mtgaOverlayOnly) {
@@ -36,14 +56,14 @@ window.addEventListener('beforeunload', function() {
 
 let rightClickPosition = null
 
-const menu = new Menu()
-const menuItem = new MenuItem({
+const contextMenu = new Menu()
+const contextMenuItem = new MenuItem({
   label: 'Inspect Element',
   click: () => {
     remote.getCurrentWindow().inspectElement(rightClickPosition.x, rightClickPosition.y)
   }
 })
-menu.append(menuItem)
+contextMenu.append(contextMenuItem)
 
 const API_URL = remote.getGlobal('API_URL');
 
@@ -78,6 +98,10 @@ var port = remote.getGlobal('port');
 var timerRunning = false;
 var uploadDelay = 0;
 var hideModeManager;
+var showUIButtons = remote.getGlobal('showUIButtons')
+var showHideButton = remote.getGlobal('showHideButton')
+var showMenu = remote.getGlobal('showMenu')
+var useMinimal = remote.getGlobal('useMinimal')
 
 setInterval(() => {
   uploadDelay -= 1
@@ -96,7 +120,7 @@ if (debug) {
   window.addEventListener('contextmenu', (e) => {
     e.preventDefault()
     rightClickPosition = {x: e.x, y: e.y}
-    menu.popup(remote.getCurrentWindow())
+    contextMenu.popup(remote.getCurrentWindow())
   }, false)
 }
 
@@ -187,6 +211,9 @@ var appData = {
     recentCardsQuantityToShow: recentCardsQuantityToShow,
     recentCards: recentCards,
     minToTray: minToTray,
+    showUIButtons: showUIButtons,
+    showHideButton: showHideButton,
+    showMenu: showMenu
 }
 
 var parseVersionString = (versionStr) => {
@@ -224,16 +251,24 @@ var addMessage = (message, link, mustfollow, messageID) => {
 }
 
 var dismissMessage = (element) => {
-   let elementIdx = element.attributes.index.value
-   let messageID = false
-   if (element.attributes.messageID) {
-     messageID = element.attributes.messageID.value
-   }
-   if (messageID) {
-     ipcRenderer.send('messageAcknowledged', messageID)
-   }
-   appData.messages[elementIdx]["show"] = false;
-   resizeWindow()
+  let $element = $(element)
+  if ($element.hasClass('no-dismiss')){
+    return
+  }
+  if (!$element.hasClass('message-container')){
+    element = $(element).parents('.message-container').get(0)
+  }
+
+  let elementIdx = element.attributes.index.value
+  let messageID = false
+  if (element.attributes.messageID) {
+    messageID = element.attributes.messageID.value
+  }
+  if (messageID) {
+    ipcRenderer.send('messageAcknowledged', messageID)
+  }
+  appData.messages[elementIdx]["show"] = false;
+  resizeWindow()
 }
 
 request.get({
@@ -260,7 +295,10 @@ let deckFrequencySubLists = function (decklist) {
   let card_count = -1;
   let sublists = [];
   let current_sublist = null;
-  for ( card of decklist ) {
+  let reverse_sort = function(a, b){return b.count_in_deck - a.count_in_deck}
+  // Don't mutate input list
+  sorted_deck = [...decklist].sort(reverse_sort)
+  for ( card of sorted_deck ) {
     if (card.count_in_deck != card_count){
       if ( current_sublist != null ){
         sublists.push(current_sublist);
@@ -273,23 +311,6 @@ let deckFrequencySubLists = function (decklist) {
   sublists.push(current_sublist);
   return sublists;
 };
-
-let sortDecklist = function (decklist) {
-    if (decklist.length === 0) {
-        return decklist;
-    }
-    if (sortMethod.startsWith("draw")) {
-        let subsort = sortMethod.split('-')[1];
-        if ( subsort === undefined ){
-          subsort = 'name';
-        }
-        return drawSort(decklist,subsort);
-    } else if (sortMethod == "emerald") {
-        return emeraldSort(decklist);
-    } else if (sortMethod == "color") {
-        return colorSort(decklist);
-    }
-}
 
 let emeraldSort = function (decklist) {
    return decklist.sort(
@@ -529,38 +550,38 @@ let getColorValue = function(card) {
   return value;
 }
 
-rivets.formatters.drawStatsSort = function(decklist) {
-    return sortDecklist(decklist);
-};
-
-rivets.formatters.drawStatsMergeDuplicates = function(decklist) {
+let mergeDuplicates = function(decklist) {
+    let field = 'pretty_name'
+    if (decklist[0].card != undefined){ field = 'card'}
     let mergedDecklist = new Map();
     decklist.forEach((card) => {
-        if (mergedDecklist.get(card.card)) {
-            mergedDecklist.get(card.card).count_in_deck += card.count_in_deck;
+        if (mergedDecklist.get(card[field])) {
+            mergedDecklist.get(card[field]).count_in_deck += card.count_in_deck;
         }
         else {
-            mergedDecklist.set(card.card, card);
+            mergedDecklist.set(card[field], Object.assign({}, card));
         }
     });
     return Array.from(mergedDecklist.values());
 };
 
 rivets.formatters.decklistSort = function(decklist) {
-    return sortDecklist(decklist);
-};
+    if (decklist.length === 0) {
+        return decklist;
+    }
 
-rivets.formatters.decklistMergeDuplicates = function(decklist) {
-    let mergedDecklist = new Map();
-    decklist.forEach((card) => {
-        if (mergedDecklist.get(card.pretty_name)) {
-            mergedDecklist.get(card.pretty_name).count_in_deck += card.count_in_deck;
+    let sorted_decklist = mergeDuplicates(decklist)
+    if (sortMethod.startsWith("draw")) {
+        let subsort = sortMethod.split('-')[1];
+        if ( subsort === undefined ){
+          subsort = 'name';
         }
-        else {
-            mergedDecklist.set(card.pretty_name, card);
-        }
-    });
-    return Array.from(mergedDecklist.values());
+        return drawSort(sorted_decklist,subsort);
+    } else if (sortMethod == "emerald") {
+        return emeraldSort(sorted_decklist);
+    } else if (sortMethod == "color") {
+        return colorSort(sorted_decklist);
+    }
 };
 
 rivets.binders.showmessage = function(el, value) {
@@ -696,11 +717,6 @@ function hideCallback(hidden) {
   resizeWindow()
 }
 
-document.getElementById("floating-eye").addEventListener("click", function() {
-  hideModeManager.toggleHidden()
-  ipcRenderer.send('hideRequest')
-})
-
 ws.addEventListener('open', () => {
     ws.send('hello!');
     console.log("sent hello")
@@ -714,10 +730,8 @@ function resizeWindow() {
 
     container = document.getElementById("container")
 
-    let totalHeight = 10;
-
+    let totalHeight = 0;
     totalHeight += $('#tracker-header').outerHeight(true);
-
     $("#tracker-body").children().each(function(c, e) {
         if(e.style.display != "none" && !e.classList.contains("no-height-contribution"))
             totalHeight += $(e).outerHeight(true);
@@ -746,6 +760,7 @@ function resizeWindow() {
     if (!(debug || useFrame)) {
         browserWindow.setBounds(bounds)
     }
+    setClickHandlers();
 }
 
 function populateDeck(elem) {
@@ -798,72 +813,22 @@ function unpopulateDecklist() {
     resizeWindow()
 }
 
-let getTrackerToken = () => {
+function passThrough(endpoint, passData, playerID) {
+  passData.playerId = playerID;
   return new Promise((resolve, reject) => {
-    let tokenOK = true;
-    if (token) {
-      if (jwt.decode(token).exp < Date.now() / 1000) tokenOK = false
-    } else {
-      tokenOK = false;
-    }
-    if (tokenOK) {
-      console.log("old token was fine")
-      resolve({token: token})
-    } else {
-      keytar.getPassword("mtgatracker", "tracker-id").then(trackerID => {
-        console.log("sending token request...")
-        request.post({
-            url: `${API_URL}/public-api/tracker-token`,
-            json: true,
-            body: {trackerID: trackerID},
-            headers: {'User-Agent': 'MTGATracker-App'}
-        }, (err, res, data) => {
-          if (err || res.statusCode != 200) {
-            errors.push({on: "get_token", error: err || res})
-            reject({attempt: attempt, errors: errors})
-          } else {
-            token = data.token;
-            resolve({token: data.token})
-          }
-        })
-      })
-    }
-  })
-}
-
-function passThrough(endpoint, passData, playerKey, errors) {
-  if (!errors) {
-    errors = []
-  }
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      getTrackerToken().then(tokenObj => {
-        let {token} = tokenObj;
-        passData.hero = playerKey;
-        if (!remote.getGlobal("incognito")) {  // we're only allowed to use passThrough data if not incognito
-          setTimeout(() => {
-            console.log(`posting ${endpoint} request...`)
-            request.post({
-              url: `${API_URL}/${endpoint}`,
-              json: true,
-              body: passData,
-              headers: {'User-Agent': 'MTGATracker-App', token: token}
-            }, (err, res, data) => {
-              console.log(`finished posting ${endpoint} request...`)
-              if (err || res.statusCode != 200) {
-                errors.push({on: `post_${endpoint}`, error: err || res})
-                reject({errors: errors})
-              } else {
-                console.log(`${endpoint} uploaded! huzzah!`)
-                resolve({
-                  success: true
-                })
-              }
-            })
-          }, 100 * uploadDelay)
-        }
-      })
-    }, 3000)  // wait a second to let the game result be saved before trying to modify it's rank
+    console.log(`posting ${endpoint} request...`)
+    let fetchURL = `insp://${endpoint}`
+    fetch(fetchURL, {method: "POST", body: JSON.stringify(passData)})
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error)
+      console.log(`finished posting ${endpoint} request...`)
+      resolve({success: true})
+    }).catch(err => {
+      addMessage(`WARNING! Could not record ${endpoint}! Please contact us in Discord for support! (${err})`)
+      console.log(err)
+      reject({on: `post_${endpoint}`, error: err || res})
+    })
   })
 }
 
@@ -890,11 +855,7 @@ function getDeckById(deckID){
   return appData.player_decks.find(x => x.deck_id == deckID) || false
 }
 
-function uploadGame(attempt, gameData, errors) {
-  if (!errors) {
-    errors = []
-  }
-  if (attempt == 0) { // only set local winloss counters on first upload attempt
+function uploadGame(gameData) {
     const victory = gameData.players[0].name === gameData.winner;
 
     //only update per-deck win/loss for decks we know about
@@ -933,66 +894,52 @@ function uploadGame(attempt, gameData, errors) {
       key: "total",
       value: {alltime:appData.winLossObj.alltime.total,daily:appData.winLossObj.daily.total}
     });
-  }
+
+  let fetchURL = `insp://insert-game`
+  fetch(fetchURL, {method: "POST", body: JSON.stringify(gameData)})
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      console.log(`got ${data} from insert-game`)
+      console.log(data)
+
+      if (remote.getGlobal("showInspector")) {
+        // TODO: open inspector window instead of linking to https://inspector...
+        addMessage("Game saved in Inspector!", "javascript:openInspector();")
+      }
+    })
+    .catch(err => {
+      console.log(err)
+      addMessage(`WARNING! Could not save game result! Please contact us in Discord for support! (${err})`)
+    })
 
   return new Promise((resolve, reject) => {
-    if (attempt > 5) {
-      if (!remote.getGlobal("incognito")) {
-        addMessage("WARNING! Could not upload game result to inspector! Error log generated @ uploadfailure.log ... please send this log to our discord #bug_reports channel!")
-        resizeWindow()
+    let anonGameData = {
+      anonymousUserID: crypto.createHash('md5').update(gameData.players[0].name).digest("hex"),
+      gameID: crypto.createHash('md5').update(gameData.gameID).digest("hex"),
+      client_version: appData.version,
+    }
+    console.log("posting game request...")
+    console.log(anonGameData)
+    postGameUrl = `${API_URL}/anon-api/game`
+    request.post({
+      url: postGameUrl,
+      json: true,
+      body: anonGameData,
+      headers: {'User-Agent': 'MTGATracker-App', token: token}
+    }, (err, res, data) => {
+      console.log("finished posting game request...")
+      console.log(res)
+      console.log(err)
+      if (err || res.statusCode != 201) {
+        console.log({on: "post_game", error: err || res})
+        resolve({attempt: attempt, errors: errors})
+      } else {
+        resolve({success: true})
       }
-      let filePath = runFromSource ? "uploadfailure.log" : "../uploadfailure.log";
-      cleanErrors(errors)
-      fs.writeFile(filePath, JSON.stringify({fatal: "too_many_attempts", errors: errors}))
-      reject({fatal: "too_many_attempts", errors: errors})
-    } else {
-      let delay = 1000 * attempt;
-      setTimeout(() => {
-        getTrackerToken().then(tokenObj => {
-          let {token} = tokenObj;
-          if (token.errors) {
-            errors.push({on: "get_token", error: err || res})
-            resolve({attempt: attempt, errors: errors})
-          } else {
-            gameData.client_version = appData.version
-            if (remote.getGlobal("incognito")) {  // we're not allowed to use this game data :(
-              gameData = {anonymousUserID: crypto.createHash('md5').update(gameData.players[0].name).digest("hex")}
-            }
-            console.log("posting game request...")
-            let postGameUrl = `${API_URL}/tracker-api/game`
-            if (remote.getGlobal("incognito")) {
-              postGameUrl = `${API_URL}/anon-api/game`
-            }
-            setTimeout(() => {
-              request.post({
-                url: postGameUrl,
-                json: true,
-                body: gameData,
-                headers: {'User-Agent': 'MTGATracker-App', token: token}
-              }, (err, res, data) => {
-                console.log("finished posting game request...")
-                console.log(res)
-                console.log(err)
-                if (err || res.statusCode != 201) {
-                  errors.push({on: "post_game", error: err || res})
-                  resolve({attempt: attempt, errors: errors})
-                } else {
-                  resolve({
-                    success: true
-                  })
-                }
-              })
-            }, 100 * uploadDelay)
-          }
-        })
-      }, delay)
-    }
-  }).then(result => {
-    if (!result || !result.success) {
-      return uploadGame(++attempt, gameData, result.errors)
-    } else {
-      return result
-    }
+    })
   })
 }
 
@@ -1020,12 +967,7 @@ let onMessage = (data) => {
               $(".cardsleft").addClass("gamecomplete")
 
               gameLookup[data.game.gameID] = {count: 0, uploaded: true}
-              uploadGame(0, data.game)
-                .then(() => {
-                  if (!remote.getGlobal("incognito") && remote.getGlobal("showInspector")) {
-                    addMessage("Game sent to Inspector!", "https://inspector.mtgatracker.com")
-                  }
-                })
+              uploadGame(data.game)
             } else if (data.gameID) {
               console.log(`match_complete and gameID ${data.gameID} but no game data`)
               if (gameAlreadyUploaded(data.gameID)) {
@@ -1033,13 +975,7 @@ let onMessage = (data) => {
                   if (!gameLookup[data.gameID].uploaded) {
                     gameLookup[data.gameID].uploaded = true
                     if (lastGameState) {
-                      uploadGame(0, lastGameState)
-                        .then(() => {
-                          console.log("successfully uploaded game!")
-                          if (!remote.getGlobal("incognito") && remote.getGlobal("showInspector")) {
-                            addMessage("Game sent to Inspector!", "https://inspector.mtgatracker.com")
-                          }
-                        })
+                      uploadGame(lastGameState)
                     }
                   }
                 }
@@ -1113,12 +1049,8 @@ let onMessage = (data) => {
         }
         appData.last_error = data.msg;
     } else if (data.data_type == "message") {
-        if (data.right_click) {
-            hideModeManager.toggleHidden(!appData.invertHideMode)
-            ipcRenderer.send('hideRequest', !appData.invertHideMode)
-        } else if (data.left_click && remote.getGlobal("leftMouseEvents")) {
-            hideModeManager.toggleHidden(appData.invertHideMode)
-            ipcRenderer.send('hideRequest', appData.invertHideMode)
+        if (data.right_click && !debug) {
+            hideWindow()
         } else if (data.draft_collection_count) {
           console.log("handle draft stuff")
           console.log(data.draft_collection_count)
@@ -1129,7 +1061,7 @@ let onMessage = (data) => {
 
           appData.draftStats = data.draft_collection_count
         } else if (data.rank_change) {
-          passThrough("tracker-api/rankChange", data.rank_change, data.player_key).catch(e => {
+          passThrough("rankChange", data.rank_change, data.player_key).catch(e => {
             console.log("error uploading rank data: ")
             console.log(e)
           })
@@ -1193,7 +1125,7 @@ let onMessage = (data) => {
            // })
           }
         } else if (data.draftPick) {
-          passThrough("tracker-api/draft-pick", data.draftPick, data.player_key).catch(e => {
+          passThrough("draft-pick", data.draftPick, data.player_key).catch(e => {
             console.log("error uploading draftPick data: ")
             console.log(e)
           })
@@ -1236,8 +1168,162 @@ let onMessage = (data) => {
     resizeWindow()
 }
 
-document.addEventListener("DOMContentLoaded", function(event) {
+let stepZoom = (zoomIn=true) => {
+  zoom += zoomIn ? 0.1 : -0.1;
+  if ( zoom < 0.2 ) {
+    zoom = 0.2;
+  }
+  applyZoom()
+}
 
+let resetZoom = () => {
+  zoom = 1
+  applyZoom()
+}
+
+let applyZoom = () => {
+  browserWindow.webContents.setZoomFactor(zoom)
+  ipcRenderer.send('settingsChanged', {key: "zoom", value: zoom})
+}
+
+let zoomIn = () => {
+  stepZoom()
+}
+
+let zoomOut = () => {
+  stepZoom(false)
+}
+
+//function to close because of coming feature: close to tray
+let close = () => {
+  browserWindow.close()
+}
+
+let openInspector = () => { ipcRenderer.send('openInspector', null); }
+
+let menu_items = [
+  {
+    label: 'History',
+    action: () => { ipcRenderer.send('openHistory', null); }
+  },
+  {
+    label: 'Settings',
+    action: () => { ipcRenderer.send('openSettings', null); }
+  },
+  {
+    label: 'Inspector',
+    action: openInspector
+  },
+  {
+    label: 'Zoom',
+    submenu: [
+      {
+        label: 'Zoom in',
+        action: zoomIn,
+        keep_open: true
+      },
+      {
+        label: 'Zoom out',
+        action: zoomOut,
+        keep_open: true
+      },
+      {
+        label: 'Reset zoom',
+        action: resetZoom,
+        keep_open: true
+      },
+    ],
+    separator: 'both'
+  },
+  {
+    label: 'Exit',
+    action: close
+  },
+];
+
+let buildMenu = () => {
+  let menu = $('<ul></ul>')
+  for (let menu_item of menu_items) {
+    menu.append(buildMenuItem(menu_item))
+  }
+  $('#main-menu').append(menu)
+};
+
+let buildMenuItem = (menu_item) => {
+  let li = $('<li></li>')
+  let item = $('<a></a>')
+  item.text(menu_item.label)
+
+  if (menu_item.action != undefined) {
+    let action = null
+    if ( menu_item.keep_open ) {
+      action = menu_item.action
+    } else {
+      action = () => { menu_item.action.call(); toggleMenu()}
+    }
+    item.click(action)
+  }
+
+  li.append(item)
+
+  if (menu_item.separator != undefined) {
+    if (menu_item.separator == 'both' || menu_item.separator == 'top'){
+      li.addClass('separator-top')
+    }
+    if (menu_item.separator == 'both' || menu_item.separator == 'bottom'){
+      li.addClass('separator-bottom')
+    }
+  }
+
+  if (menu_item.submenu != undefined) {
+    let submenu = $('<ul></ul>')
+    for (let submenu_item of menu_item.submenu){
+      submenu.append(buildMenuItem(submenu_item))
+    }
+    li.append(submenu)
+  }
+  return li
+}
+
+let toggleMenu = () => {
+  $('#main-menu').toggleClass('hide-me');
+  $('body').toggleClass('no-drag');
+}
+
+let updateTitleWidth = () => {
+  let width = useMinimal ? 278 : 320
+  if (appData.showHideButton) {
+    width -= 26
+  }
+  if (appData.showUIButtons){
+    width -= 50
+  }
+  if (appData.showMenu) {
+    width -= 24
+  }
+  if (!(appData.showHideButton && appData.showMenu && appData.showUIButtons)){
+    width -= 8
+  }
+  $('#tracker-header h1').css('width',width)
+}
+
+/**
+ * These click handlers need to be reset on all resizeWindow calls because of DOM changes
+ */
+
+let setClickHandlers = () => {
+  addClickHandler('.message-container',(e) => {dismissMessage(e.target)})
+  addClickHandler('.back-draft',(e) => {exitDraft()})
+  addClickHandler('.back-to-decklist',(e) => {unpopulateDecklist()})
+  addClickHandler('.deck-container',(e) => {populateDeck($(e.target).parent().get(0))})
+}
+
+let hideWindow = () => {
+    hideModeManager.toggleHidden()
+    ipcRenderer.send('hideRequest')
+}
+
+document.addEventListener("DOMContentLoaded", function(event) {
     hideModeManager = hideWindowManager({
       useRollupMode: function() {return remote.getGlobal('rollupMode')},
       getHideDelay: function() {return remote.getGlobal('hideDelay')},
@@ -1248,6 +1334,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
       containerID: "#container",
       hideCallback: hideCallback,
     })
+
+    if (invertHideMode){
+      hideWindow()
+    }
 
     setInterval(() => {
         $('#overall-timer').html(overallTimer.getTimeValues().toString());
@@ -1261,23 +1351,19 @@ document.addEventListener("DOMContentLoaded", function(event) {
     } else {
         $("#container").addClass("container-normal")
     }
-    $("#floating-settings").click(() => {
-      ipcRenderer.send('openSettings', null)
-    })
-    $("#floating-history").click(() => {
-      ipcRenderer.send('openHistory', null)
-    })
-    $(".zoom-out").click(() => {
-        zoom -= 0.1
-        zoom = Math.max(zoom, 0.2)
-        browserWindow.webContents.setZoomFactor(zoom)
-        ipcRenderer.send('settingsChanged', {key: "zoom", value: zoom})
-    })
-    $(".zoom-in").click(() => {
-        zoom += 0.1
-        browserWindow.webContents.setZoomFactor(zoom)
-        ipcRenderer.send('settingsChanged', {key: "zoom", value: zoom})
-    })
+
+    /**
+     * These click handlers only need to be set once, so called here.
+     */
+
+    buildMenu()
+    updateTitleWidth()
+    addClickHandler('#menu-icon',toggleMenu)
+    addClickHandler('#floating-eye',hideWindow)
+    addClickHandler('#minimize-icon',() => {browserWindow.minimize()})
+    addClickHandler('#close-icon',close)
+    addClickHandler('body',null)
+
     //open links externally by default
     $(document).on('click', 'a[href^="http"]', function(event) {
         event.preventDefault();
@@ -1392,7 +1478,7 @@ ipcRenderer.on('settingsChanged', () => {
     currentFlatLink.remove()
   }
 
-  let useMinimal = remote.getGlobal("useMinimal")
+  useMinimal = remote.getGlobal("useMinimal")
 
   let currentMinimalLink = $("#minimal")
   if (useMinimal) {
@@ -1404,9 +1490,11 @@ ipcRenderer.on('settingsChanged', () => {
       link.type = 'text/css';
       link.href = 'minimal.css';
       head.appendChild(link)
+      updateTitleWidth()
     }
   } else if (currentMinimalLink) {
     currentMinimalLink.remove()
+    updateTitleWidth()
   }
 
   if ((themeFile && (themeFile != lastThemeFile)) || useTheme != lastUseTheme) {
@@ -1427,6 +1515,20 @@ ipcRenderer.on('settingsChanged', () => {
       head.appendChild(link)
     }
   }
+
+  let buttonsChanged = false
+  let fields = ['showUIButtons','showMenu','showHideButton']
+  for (let field of fields) {
+    let newVal = remote.getGlobal(field)
+    if (newVal != appData[field]){
+      appData[field] = newVal
+      buttonsChanged = true
+    }
+  }
+  if (buttonsChanged) {
+    updateTitleWidth()
+  }
+
   resizeWindow()
 })
 

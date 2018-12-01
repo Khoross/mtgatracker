@@ -7,6 +7,13 @@ const keytar = require('keytar')
 const mtga = require('mtga')
 const path = require('path')
 const os = require('os')
+const jwt = require('jsonwebtoken')
+const request = require('request')
+
+var { rendererPreload } = require('electron-routes');
+rendererPreload();
+
+var { databaseFiles } = require("./conf")
 
 let desktopPath = path.join(os.homedir(), 'Desktop')
 
@@ -20,6 +27,17 @@ tt({
   }
 })
 
+var buildWorker = function(func) {
+  // https://stackoverflow.com/questions/5408406/web-workers-without-a-separate-javascript-file
+  var blobURL = URL.createObjectURL(new Blob([ '(', func.toString(), ')()' ], { type: 'application/javascript' })),
+
+  worker = new Worker(blobURL);
+
+  // Won't be needing this anymore
+  URL.revokeObjectURL(blobURL);
+  return worker
+}
+
 var settingsData = {
   version: remote.getGlobal("version"),
   commit: "",
@@ -27,7 +45,7 @@ var settingsData = {
   logPath: remote.getGlobal("logPath"),
   version: remote.getGlobal("version"),
   mtgaOverlayOnly: remote.getGlobal("mtgaOverlayOnly"),
-  settingsPaneIndex: "about",
+  settingsPaneIndex: remote.getGlobal("settingsPaneIndex"),
   debug: remote.getGlobal('debug'),
   showErrors: remote.getGlobal('showErrors'),
   showInspector: remote.getGlobal('showInspector'),
@@ -48,6 +66,8 @@ var settingsData = {
   totalWinLossCounter: null,
   dailyTotalWinLossCounter: null,
   lastCollection: remote.getGlobal('lastCollection'),
+  lastCollectionCount: "loading...",
+  lastCollectionSetProgress: [{name: "loading..."}],
   lastVaultProgress: remote.getGlobal('lastVaultProgress'),
   showVaultProgress: remote.getGlobal('showVaultProgress'),
   minVaultProgress: remote.getGlobal('minVaultProgress'),
@@ -69,17 +89,19 @@ var settingsData = {
   trackerID: remote.getGlobal('trackerID'),
   customStyleFiles: [],
   sortingMethods: [
-    {id: "draw", text: "By likelihood of next draw, then by name (default)",
-    help: "This method shows cards in order from most likely to draw on top of the list to least likely to draw on the bottom, followed by name within a given likelihood."},
-    {id: "emerald", text: '"Emerald" method',
-    help: "This method sorts cards by card type, then by cost, then by name."},
-    {id: "color", text: 'Sorts first by cost, then color, then name.',
-    help: "This method sorts cards first by cost, then color, then by name."},
-    {id: "draw-emerald", text: 'By likelihood of next draw, then by the "Emerald" method',
-    help: "This method sorts cards by likelihood of next draw, then, within a likelihood, by card type, then by cost, then by name."},
-    {id: "draw-color", text: 'By likelihood of next draw, then by cost, color, and name',
-    help: "This method sorts cards by likelihood of next draw, then, by cost, then color, then by name."},
+    {id: "draw", text: "Draw (Default)", help: "By likelihood of next draw with most likely on top, then by name."},
+    {id: "emerald", text: 'Emerald',
+    help: "By card type, then by cost, then by name."},
+    {id: "color", text: "Color",
+    help: "By cost, then by color, then by name. This is similar to MTGA sorting."},
+    {id: "draw-emerald", text: "Draw, Emerald",
+    help: "By likelihood of next draw, then by card type, then by cost, then by name."},
+    {id: "draw-color", text: "Draw, Color",
+    help: "By likelihood of next draw, then by cost, then by color, then by name."},
   ],
+  showUIButtons: remote.getGlobal('showUIButtons'),
+  showHideButton: remote.getGlobal('showHideButton'),
+  showMenu: remote.getGlobal('showMenu')
 }
 
 settingsData.counterDeckList = counterDecks(settingsData.winLossObj.alltime);
@@ -149,18 +171,6 @@ function counterDecks(winLossObj){
     }
   } );
 }
-
-rivets.formatters.countcollection = function(collection) {
-    let total = 0;
-    let unique = 0;
-    for (let key in collection) {
-      if (collection[key] && Number.isInteger(collection[key])) {
-        total += collection[key]
-        unique += 1
-      }
-    }
-    return `${unique} unique cards, ${total} total cards`
-};
 
 rivets.formatters.and = function(comparee, comparator) {
     return comparee && comparator;
@@ -248,6 +258,48 @@ rivets.binders.deckid = function(el, value) {
   el.setAttribute('data-deckid', value);
 }
 
+rivets.binders.mythicprogress = function(el, value) {
+  el.style.width = Math.max(0, (100 * value.mythicOwned / value.mythicTotal)) + "%"
+}
+
+rivets.binders.rareprogress = function(el, value) {
+  el.style.width = Math.max(0, (100 * value.rareOwned / value.rareTotal)) + "%"
+}
+
+rivets.binders.uncommonprogress = function(el, value) {
+  el.style.width = Math.max(0, (100 * value.uncommonOwned / value.uncommonTotal)) + "%"
+}
+
+rivets.binders.commonprogress = function(el, value) {
+  el.style.width = Math.max(0, (100 * value.commonOwned / value.commonTotal)) + "%"
+}
+
+const setPromoMap = {
+  RIX: "img/card_set_promos/rix.png",
+  M19: "img/card_set_promos/m19.png",
+  GRN: "img/card_set_promos/grn.png",
+  XLN: "img/card_set_promos/xln.png",
+  DAR: "img/card_set_promos/dar.png",
+  ANA: "img/card_set_promos/ana.png",
+}
+
+rivets.binders.setpromo = function(el, value) {
+  if (Object.keys(setPromoMap).includes(value)) {
+    el.style.display = "block"
+    el.src = setPromoMap[value]
+  } else {
+    el.style.display = "none"
+  }
+}
+
+rivets.binders.hidesetname = function(el, value) {
+  if (Object.keys(setPromoMap).includes(value)) {
+    el.style.display = "none"
+  } else {
+    el.style.display = "block"
+  }
+}
+
 function recentCardsSectionClickHandler(event) {
   var revealed = $(event.target).siblings(".recent-cards-container").is(":hidden");
   if(revealed) {
@@ -260,6 +312,101 @@ function recentCardsSectionClickHandler(event) {
 var firstCounterAdjButtonClicked = true;
 document.addEventListener("DOMContentLoaded", function(event) {
   rivets.bind(document.getElementById('container'), settingsData)
+
+  let collectionWorker = buildWorker(e => {
+    var allCards;
+    var cardSets = {}
+    var playerCardCounts = {}
+    onmessage = event => {
+      if (event.data.allCards) {
+        allCards = event.data.allCards.attributes.cards;
+        // Note: this block of code looks really stupid, but trust me, it's necessary.
+        // TL:DR; you can't `require(...)` inside webworkers, so we lose all of the cool mtga functionality.
+        // As if that wasn't bad enough: since mtga uses backbone BS, we have to do silly things to
+        // get to the actual objects within the allCards object.
+        // Anyways, this block of code basically redoes all the organization that mtga originally offered in the
+        // first place. :tiny_violin:
+        for (let cardID in allCards) {
+          let thisCard = allCards[cardID].attributes
+          if (!cardSets[thisCard.set]) {
+            cardSets[thisCard.set] = {
+              cards: [],
+              counts: {
+                mythicTotal: 0,
+                rareTotal: 0,
+                uncommonTotal: 0,
+                commonTotal: 0
+              }
+            }
+          }
+          let thisCardsSet = cardSets[thisCard.set]
+          thisCardsSet.cards.push(thisCard)
+          // add 4 for each unique card; you can collect 4 of each
+          if (thisCard.rarity == "Mythic Rare") {
+            thisCardsSet.counts.mythicTotal += 4;
+          } else if (thisCard.rarity == "Rare") {
+            thisCardsSet.counts.rareTotal += 4;
+          } else if (thisCard.rarity == "Uncommon") {
+            thisCardsSet.counts.uncommonTotal += 4;
+          } else if (thisCard.rarity == "Common") {
+            thisCardsSet.counts.commonTotal += 4;
+          }
+        }
+        console.log(cardSets)
+        postMessage({ready: true})
+      } else if (event.data.lastCollection) {
+        let total = 0;
+        let unique = 0;
+        let collection = event.data.lastCollection;
+        console.log(Object.keys(allCards))
+        for (let key in collection) {
+          if (collection[key] && Number.isInteger(collection[key])) {
+            if (Object.keys(allCards).includes(key)) {
+              let thisCard = allCards[key].attributes
+              let thisCardsSet = cardSets[thisCard.set]
+              if (!Object.keys(playerCardCounts).includes(thisCard.set)) {
+                playerCardCounts[thisCard.set] = thisCardsSet.counts
+                playerCardCounts[thisCard.set].name = thisCard.set
+                playerCardCounts[thisCard.set].mythicOwned = 0
+                playerCardCounts[thisCard.set].rareOwned = 0
+                playerCardCounts[thisCard.set].uncommonOwned = 0
+                playerCardCounts[thisCard.set].commonOwned = 0
+              }
+
+              if (thisCard.rarity == "Mythic Rare") {
+                playerCardCounts[thisCard.set].mythicOwned += collection[key];
+              } else if (thisCard.rarity == "Rare") {
+                playerCardCounts[thisCard.set].rareOwned += collection[key];
+              } else if (thisCard.rarity == "Uncommon") {
+                playerCardCounts[thisCard.set].uncommonOwned += collection[key];
+              } else if (thisCard.rarity == "Common") {
+                playerCardCounts[thisCard.set].commonOwned += collection[key];
+              }
+              playerCardCounts[thisCard.set]
+            }
+            total += collection[key]
+            unique += 1
+          }
+        }
+
+        postMessage({
+          lastCollectionCount: `${unique} unique cards, ${total} total cards`,
+          playerCardCounts: Object.values(playerCardCounts),
+        })
+      }
+    }
+    // for(;;) {}; // use this to loop forever, and test that hung worker doesn't make window hang
+  })
+
+  collectionWorker.onmessage = event => {
+    if (event.data.lastCollectionCount) {
+      settingsData.lastCollectionCount = event.data.lastCollectionCount
+      settingsData.lastCollectionSetProgress = event.data.playerCardCounts
+    } else if (event.data.ready) {
+      collectionWorker.postMessage({lastCollection: settingsData.lastCollection})
+    }
+  }
+  collectionWorker.postMessage({allCards: mtga.allCards})
 
   let themePath = settingsData.runFromSource ? "themes" : path.join("..", "themes");
   fs.readdir(themePath, (err, files) => {
@@ -413,6 +560,223 @@ document.addEventListener("DOMContentLoaded", function(event) {
     console.log("resetting gameHstory")
     ipcRenderer.send('clearGameHistory')
   })
+  $("#backup-inspector-data").click((e) => {
+
+    let allDatabaseFiles = Object.values(databaseFiles)
+    let dbDirname = path.dirname(allDatabaseFiles[0])
+    let backupDirname = path.join(dbDirname, "inspector_backups")
+
+    if (!fs.existsSync(backupDirname)){
+        fs.mkdirSync(backupDirname);
+    }
+
+    let today = new Date()
+    let backupPrefix = `${today.getFullYear()}_${today.getMonth()}_${today.getDate()}_${today.getHours()}_${today.getMinutes()}_${today.getSeconds()}`
+
+    let allWrittenPromises = []
+
+    for (let file of allDatabaseFiles) {
+      let filePath = path.parse(file)
+      let backupName = `${filePath.name}-${backupPrefix}${filePath.ext}`
+      let backupFile = path.join(backupDirname, backupName)
+      let stream = fs.createReadStream(path.format(filePath)).pipe(fs.createWriteStream(backupFile))
+      allWrittenPromises.push(new Promise((resolve, reject) => {
+        stream.on("finish", resolve)
+      }))
+    }
+    Promise.all(allWrittenPromises).then(e => alert(`Files backed up to ${backupDirname}${path.sep}inspector-<type>-${backupPrefix}.db`))
+  })
+  $("#collect-all-inspector-data").click((e) => {
+    $("#collect-inspector-progress").css("display", "block")
+    $("#collect-inspector-progress").append("<p>Authenticating with Inspector API...</p>")
+    $("#collect-all-inspector-data").prop("disabled", true)
+    let gameUrl = API_URL + "/tracker-api/games"
+    getTrackerToken().then(tokenObj => {
+      // TODO: un-callback-hell-ify this mess
+      $("#collect-inspector-progress").append("<p>Success!</p>")
+      $("#collect-inspector-progress").append("<hr>")
+      $("#collect-inspector-progress").append("<p>Requesting game records...</p>")
+      let {token} = tokenObj;
+      request.get({
+        url: gameUrl,
+        json: true,
+        headers: {'User-Agent': 'MTGATracker-App', token: token}
+      }, (err, res, data) => {
+        $("#collect-inspector-progress").append(`<p>Found <b>${data.docs.length}</b> records to save!</i></p>`)
+        let coldStorageDocs = data.docs.filter(doc => doc.inColdStorage)
+        let regularDocs = data.docs.filter(doc => doc.inColdStorage == undefined)
+        $("#collect-inspector-progress").append(`<p><b>${regularDocs.length}</b> games can be added immediately, <b>${coldStorageDocs.length}</b> must be fetched from cold-storage...</p>`)
+        $("#collect-inspector-progress").append(`<p>Adding <b>${regularDocs.length}</b> records to local inspector...</p>`)
+        $("#collect-inspector-progress").append(`<p><i><span id="collection-game-count">Processed 0...</span></i></p>`)
+
+        let inserted = 0;
+        let alreadyThere = 0;
+        let fetchURL = `insp://insert-game`
+
+        for (let game of regularDocs) {
+          game.date = new Date(Date.parse(game.date))
+        }
+
+        let insertFuncs = regularDocs.map(doc => () => fetch(fetchURL, {method: "POST", body: JSON.stringify(doc)})
+            .then(resp => resp.json())
+            .then(data => {
+              if (data.error) {
+                throw new Error(data.error)
+              }
+              console.log(`got ${data} from insert-game`)
+              console.log(data)
+
+              inserted += 1;
+              if (inserted % 10 == 0) {
+                $("#collection-game-count").append(` ${inserted}...`)
+              }
+            })
+            .catch(err => {
+              console.log(err)
+              if (err.message == "game_already_exists") {
+                alreadyThere++;
+              } else {
+                console.log(err.message)
+                $("#collect-inspector-progress").append(`<p><b>ERROR:</b> ${err}</p>`)
+              }
+              inserted += 1;
+              if (inserted % 10 == 0) {
+                $("#collection-game-count").append(` ${inserted}...`)
+              }
+            }))
+        promiseSerial(insertFuncs).then(res => {
+          let finished = `<p>Finished importing <b>${inserted}</b> games!`
+          if (alreadyThere) {
+            finished += ` (<i>${alreadyThere} games already existed</i>)`
+          }
+          finished += "</p>"
+          $("#collect-inspector-progress").append(finished)
+          $("#collect-inspector-progress").append("<hr>")
+          let coldStorageBuckets = {}
+          for (let game of coldStorageDocs) {
+            coldStorageBuckets[game.inColdStorage] = game._id
+          }
+          $("#collect-inspector-progress").append(`<p>Collecting <b>${coldStorageDocs.length}</b> games from cold storage (from ${Object.keys(coldStorageBuckets).length} cold-storage blocks)...`)
+          let coldStorageFetchPromises = []
+          for (let bucket in coldStorageBuckets) {
+            let gameID = coldStorageBuckets[bucket]
+            let getFromColdStorageURL = `${API_URL}/tracker-api/game/_id/${gameID}/from_cold_storage`
+            coldStorageFetchPromises.push(new Promise((resolve, reject) => {
+              request.get({
+                url: getFromColdStorageURL,
+                json: true,
+                headers: {'User-Agent': 'MTGATracker-App', token: token}
+              }, (err, res, data) => {
+                resolve(data)
+              })
+            }))
+          }
+          Promise.all(coldStorageFetchPromises).then(results => {
+            $("#collect-inspector-progress").append(`<p><i><span id="collection-game-count-cs">Processed 0...</span></i></p>`)
+            let csInsertFuncs = []
+            inserted = 0;
+            alreadyThere = 0;
+            for (let csResult of results) {
+              for (let game of csResult.records) {
+                game.date = new Date(Date.parse(game.date))
+                csInsertFuncs.push(() => fetch(fetchURL, {method: "POST", body: JSON.stringify(game)})
+                  .then(resp => resp.json())
+                  .then(data => {
+                    if (data.error) {
+                      throw new Error(data.error)
+                    }
+                    console.log(`got ${data} from insert-game`)
+                    console.log(data)
+
+                    inserted += 1;
+                    if (inserted % 10 == 0) {
+                      $("#collection-game-count-cs").append(` ${inserted}...`)
+                    }
+                  })
+                  .catch(err => {
+                    console.log(err)
+                    if (err.message == "game_already_exists") {
+                      alreadyThere++;
+                    } else {
+                      console.log(err.message)
+                      $("#collect-inspector-progress").append(`<p><b>ERROR:</b> ${err}</p>`)
+                    }
+                    inserted += 1;
+                    if (inserted % 10 == 0) {
+                      $("#collection-game-count-cs").append(` ${inserted}...`)
+                    }
+                  }))
+              }
+            }
+
+            promiseSerial(csInsertFuncs).then(res => {
+              console.log(res)
+              let finished = `<p>Finished importing <b>${inserted}</b> games from cold storage!`
+              if (alreadyThere) {
+                finished += ` (<i>${alreadyThere} games already existed</i>)`
+              }
+              finished += "</p>"
+              $("#collect-inspector-progress").append(finished)
+              $("#collect-inspector-progress").append("<hr>")
+              $("#collect-inspector-progress").append("<p>Collecting all Draft records...</p>")
+
+              let getDraftURL = `${API_URL}/tracker-api/drafts?per_page=1000`  // Does anyone have more than a thousand drafts? no way. nope. not possible.
+
+              request.get({
+                url: getDraftURL,
+                json: true,
+                headers: {'User-Agent': 'MTGATracker-App', token: token}
+              }, (err, res, data) => {
+
+                $("#collect-inspector-progress").append(`<p>Adding ${data.docs.length} draft records to local Inspector...</span></p>`)
+                $("#collect-inspector-progress").append(`<p><i><span id="collection-game-count-draft">Processed 0...</span></i></p>`)
+                let insertDraftURL = `insp://insert-draft`
+                inserted = 0
+                alreadyThere = 0
+                for (let draft of data.docs) draft.date = new Date(Date.parse(draft.date))
+                promiseSerial(data.docs.map(draft => () => fetch(insertDraftURL, {method: "POST", body: JSON.stringify(draft)})
+                  .then(resp => resp.json())
+                  .then(data => {
+                    if (data.error) {
+                      throw new Error(data.error)
+                    }
+                    console.log(`got ${data} from insert-draft`)
+                    console.log(data)
+
+                    inserted += 1;
+                    if (inserted % 10 == 0) {
+                      $("#collection-game-count-draft").append(` ${inserted}...`)
+                    }
+                  })
+                  .catch(err => {
+                    console.log(err)
+                    if (err.message == "draft_already_exists") {
+                      alreadyThere++;
+                    } else {
+                      console.log(err.message)
+                      $("#collect-inspector-progress").append(`<p><b>ERROR:</b> ${err}</p>`)
+                    }
+                    inserted += 1;
+                    if (inserted % 10 == 0) {
+                      $("#collection-game-count-draft").append(` ${inserted}...`)
+                    }
+                  }))).then(res => {
+                    let finished = `<p>Finished importing <b>${inserted}</b> drafts!`
+                    if (alreadyThere) {
+                      finished += ` (<i>${alreadyThere} drafts already existed</i>)`
+                    }
+                    finished += "</p>"
+                    $("#collect-inspector-progress").append(finished)
+                    $("#collect-inspector-progress").append("<hr>")
+                    $("#collect-inspector-progress").append("<p><b>All Clear!</b> Successfully completed all imports! You may now close this window.</p>")
+                  })
+              })
+            })
+          })
+        })
+      })
+    })
+  })
   $("#exportCollectionMTGGButton").click((e) => {
     console.log("exporting mtgg to desktop")
     let allPromises = []
@@ -492,5 +856,46 @@ document.addEventListener("DOMContentLoaded", function(event) {
     $(".slidevalue-recent-cards").html(value);
   }
 })
+
+// https://hackernoon.com/functional-javascript-resolving-promises-sequentially-7aac18c4431e
+const promiseSerial = funcs =>
+  funcs.reduce((promise, func) =>
+    promise.then(result => func().then(Array.prototype.concat.bind(result))),
+    Promise.resolve([]))
+
+var token;
+
+let getTrackerToken = () => {
+  return new Promise((resolve, reject) => {
+    let tokenOK = true;
+    if (token) {
+      if (jwt.decode(token).exp < Date.now() / 1000) tokenOK = false
+    } else {
+      tokenOK = false;
+    }
+    if (tokenOK) {
+      console.log("old token was fine")
+      resolve({token: token})
+    } else {
+      keytar.getPassword("mtgatracker", "tracker-id").then(trackerID => {
+        console.log("sending token request...")
+        request.post({
+            url: `${API_URL}/public-api/tracker-token`,
+            json: true,
+            body: {trackerID: trackerID},
+            headers: {'User-Agent': 'MTGATracker-App'}
+        }, (err, res, data) => {
+          if (err || res.statusCode != 200) {
+            errors.push({on: "get_token", error: err || res})
+            reject({attempt: attempt, errors: errors})
+          } else {
+            token = data.token;
+            resolve({token: data.token})
+          }
+        })
+      })
+    }
+  })
+}
 
 // ipcRenderer.send('settingsChanged', {cool: true})

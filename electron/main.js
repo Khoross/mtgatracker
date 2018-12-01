@@ -1,5 +1,6 @@
 const console = require('console');
 const jwt = require('jsonwebtoken');
+const { inspectorRouter } = require("./inspectorApi")
 
 global.updateReady = false
 global.updateDownloading = false
@@ -273,6 +274,9 @@ let recentCards = settings.get('recentCards', []);
 let recentCardsQuantityToShow = settings.get('recentCardsQuantityToShow', 10);
 let minToTray = settings.get('minToTray', false);
 logPath = settings.get("logPath", logPath)
+let showUIButtons = settings.get('showUIButtons',true)
+let showHideButton = settings.get('showHideButton',true)
+let showMenu = settings.get('showMenu',true)
 
 global.historyEvents = []
 
@@ -370,7 +374,7 @@ ipcMain.on('tosAgreed', (event, arg) => {
 
 let openSettingsWindow = () => {
   if(settingsWindow == null) {
-    let settingsWidth = debug ? 1400 : 1000;
+    let settingsWidth = debug ? 1400 : 1025;
 
     const settingsWindowStateMgr = windowStateKeeper('settings')
     settingsWindow = new BrowserWindow({width: settingsWidth,
@@ -400,7 +404,44 @@ let openSettingsWindow = () => {
   settingsWindow.once('ready-to-show', () => {
     settingsWindow.show()
   })
+  settingsWindow.on('close', () => {global.settingsPaneIndex = 'general'})
 }
+
+let openInspectorWindow = () => {
+  if(inspectorWindow == null) {
+    let settingsWidth = debug ? 1400 : 1025;
+
+    const inspectorWindowStateMgr = windowStateKeeper('settings')
+    inspectorWindow = new BrowserWindow({width: settingsWidth,
+                                        height: 800,
+                                        toolbar: false,
+                                        titlebar: false,
+                                        title: false,
+                                        show: false,
+                                        icon: "img/icon_small.ico",
+                                        x: inspectorWindowStateMgr.x,
+                                        y: inspectorWindowStateMgr.y})
+    inspectorWindowStateMgr.track(inspectorWindow)
+    inspectorWindow.setMenu(null)
+    inspectorWindow.loadURL(require('url').format({
+      pathname: path.join(__dirname, 'inspector/index.html'),
+      protocol: 'file:',
+      slashes: true
+    }))
+    if (debug) {
+      inspectorWindow.webContents.openDevTools()
+    }
+    inspectorWindow.on('closed', function () {
+      inspectorWindow = null;
+    })
+  }
+  inspectorWindow.once('ready-to-show', () => {
+    inspectorWindow.show()
+  })
+  inspectorWindow.on('close', () => {global.settingsPaneIndex = 'general'})
+}
+
+
 
 let openHistoryWindow = () => {
   if(historyWindow == null) {
@@ -469,6 +510,7 @@ let openTOSWindow = () => {
 }
 
 ipcMain.on('openSettings', openSettingsWindow)
+ipcMain.on('openInspector', openInspectorWindow)
 ipcMain.on('openHistory', openHistoryWindow)
 
 app.disableHardwareAcceleration()
@@ -648,6 +690,10 @@ global.recentCardsQuantityToShow = recentCardsQuantityToShow
 global.logPath = logPath
 global.minToTray = minToTray
 global.historyZoom = settings.get("history-zoom", 1.0)
+global.settingsPaneIndex = "general"
+global.showUIButtons = showUIButtons
+global.showHideButton = showHideButton
+global.showMenu = showMenu
 
 /*************************************************************
  * window management
@@ -655,6 +701,7 @@ global.historyZoom = settings.get("history-zoom", 1.0)
 
 let mainWindow = null
 let settingsWindow = null
+let inspectorWindow = null
 let historyWindow = null
 let tosWindow = null
 
@@ -666,7 +713,7 @@ if (debug) {
 }
 
 const openDeckTrackerHandler = (menuItem, browserWindow, event) => {
-    focusMTGATracker(); 
+    focusMTGATracker();
 }
 
 const openSettingsHandler = (menuItem, browserWindow, event) => {
@@ -677,6 +724,10 @@ const openHistoryHandler = (menuItem, browserWindow, event) => {
   focusMTGAHistory();
 }
 
+const openInspectorHandler = (menuItem, browserWindow, event) => {
+  focusInspector();
+}
+
 const closeTrackerHandler = (menuItem, browserWindow, event) => {
   mainWindow.close();
 }
@@ -684,7 +735,7 @@ const closeTrackerHandler = (menuItem, browserWindow, event) => {
 let tray = null;
 
 const createTray = () => {
-  if(minToTray && tray==null) {
+  if(tray==null) {
     let iconFile = 'icon_tray.png'
     let iconPath = path.join(__dirname,'img', iconFile);
     console.log(fs.existsSync(iconPath))
@@ -693,11 +744,13 @@ const createTray = () => {
     const contextMenu = Menu.buildFromTemplate([
       {label: "DeckTracker", type: "normal", click: openDeckTrackerHandler},
       {label: "Settings", type: "normal", click: openSettingsHandler},
+      {label: "Inspector", type: "normal", click: openInspectorHandler},
       {label: "History", type: "normal", click: openHistoryHandler},
       {label: "Quit", type: "normal", click: closeTrackerHandler }
     ])
     tray.setToolTip('MTGA Tracker')
     tray.setContextMenu(contextMenu)
+    tray.on("double-click", (event, bounds) => openDeckTrackerHandler())
   }
 }
 
@@ -751,6 +804,7 @@ const createMainWindow = () => {
   if (!versionsAcknowledged.includes(app.getVersion())) {
     versionsAcknowledged.push(app.getVersion())
     settings.set("versionsAcknowledged", versionsAcknowledged)
+    global.settingsPaneIndex = 'about'
     openSettingsWindow()
   }
 }
@@ -786,6 +840,19 @@ function focusMTGATrackerSettings() {
   } else {
     openSettingsWindow();
   }
+}
+
+function focusInspector() {
+  if(inspectorWindow) {
+    inspectorWindow.show();
+    if(inspectorWindow.isMinimized()) {
+      inspectorWindow.restore();
+    }
+    inspectorWindow.focus();
+  } else {
+    openInspectorWindow();
+  }
+
 }
 
 function focusMTGAHistory() {
