@@ -8,14 +8,14 @@ import VaultProgress from '../containers/VaultProgess.js'
 import ReturnLink from '../containers/ReturnLink.js'
 import MessageList from '../containers/MessageList.js'
 import CardList from '../containers/CardList.js'
-//import HeaderButtons from '../components/HeaderButtons.js'
+import HeaderButtons from '../containers/HeaderButtons.js'
 
 const DeckDetailsPage = (props) => {
   return (
     <>
       <div id="tracker-header">
         <h1 className="beleren header-title">MTGA Tracker</h1>
-        {/*<HeaderButtons />*/}
+        <HeaderButtons />
       </div>
       <div id="tracker-body">
         <div id="game-deck-list">

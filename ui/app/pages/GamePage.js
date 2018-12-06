@@ -11,14 +11,14 @@ import ErrorCount from '../containers/ErrorCount.js'
 import MessageList from '../containers/MessageList.js'
 import CardsRemaining from '../containers/CardsRemaining.js'
 import CardList from '../containers/CardList.js'
-//import HeaderButtons from '../components/HeaderButtons.js'
+import HeaderButtons from '../containers/HeaderButtons.js'
 
 const GamePage = (props) => {
   return (
     <>
       <div id="tracker-header">
         <h1 className="game-deck-title">{ props.deck_name }</h1>
-        {/*<HeaderButtons />*/}
+        <HeaderButtons />
       </div>
       <div id="tracker-body">
         <div id="game-deck-list">

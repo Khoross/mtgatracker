@@ -7,14 +7,14 @@ import WinLossEntry from '../containers/WinLossEntry.js'
 import VaultProgress from '../containers/VaultProgess.js'
 import MessageList from '../containers/MessageList.js'
 import DeckList from '../containers/DeckList.js'
-//import HeaderButtons from '../components/HeaderButtons.js'
+import HeaderButtons from '../containers/HeaderButtons.js'
 
 const DeckListPage = (props) => {
   return (
     <>
       <div id="tracker-header">
-        <h1 className="beleren header-title">MTGA Tracker</h1>
-        {/*<HeaderButtons />*/}
+        <h1 className="beleren header-title">MTGATracker</h1>
+        <HeaderButtons />
       </div>
       <div id="tracker-body">
         <div id="game-deck-list">

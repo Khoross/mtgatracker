@@ -7,14 +7,14 @@ import ReturnLink from '../containers/ReturnLink.js'
 import ErrorCount from '../containers/ErrorCount.js'
 import MessageList from '../containers/MessageList.js'
 import CardList from '../containers/CardList.js'
-//import HeaderButtons from '../components/HeaderButtons.js'
+import HeaderButtons from '../containers/HeaderButtons.js'
 
 const DraftPage = (props) => {
   return(
     <>
       <div id="tracker-header">
         <h1 className="game-deck-title gamecomplete">Draft Picks</h1>
-        {/*<HeaderButtons />*/}
+        <HeaderButtons />
         <ReturnLink />
       </div>
       <div id="tracker-body">

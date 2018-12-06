@@ -5,6 +5,7 @@ import { ConnectedRouter } from 'connected-react-router';
 import { Route } from 'react-router';
 import sizeMe from 'react-sizeme'
 import { remote } from 'electron'
+import Theme from '../containers/theme.js'
 import routes from '../constants/routes';
 import DeckListPage from './DeckListPage.js'
 import DeckDetailsPage from './DeckDetailsPage.js'
@@ -18,12 +19,12 @@ type Props = {
 };
 
 const MainApp = sizeMe({monitorHeight: true})(() => (
-  <div id="container" className="container-framed">
-    <Route exact path={routes.HOME} component={DeckListPage} />
-    <Route path={routes.DECK} component={DeckDetailsPage} />
-    <Route path={routes.GAME} component={GamePage} />
-    <Route path={routes.DRAFT} component={DraftPage} />
-  </div>
+    <div id="container" className="container-framed">
+      <Route exact path={routes.HOME} component={DeckListPage} />
+      <Route path={routes.DECK} component={DeckDetailsPage} />
+      <Route path={routes.GAME} component={GamePage} />
+      <Route path={routes.DRAFT} component={DraftPage} />
+    </div>
 ));
 
 function resizeWindow(size) {
@@ -36,7 +37,10 @@ const Root = ({store, history}) => {
   return (
     <Provider store={store}>
       <ConnectedRouter history={history}>
-        <MainApp onSize={resizeWindow}/>
+        <>
+          <Theme />
+          <MainApp onSize={resizeWindow}/>
+        </>
       </ConnectedRouter>
     </Provider>
   );
